@@ -13,6 +13,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p WHERE " +
             "(p.title LIKE %:keyword% OR p.description LIKE %:keyword%) " +
-            "AND p.status = 'SELLING'")
+            "AND p.status = 'ON_SALE'")   // SELLING → ON_SALE
     List<Product> searchByKeyword(@Param("keyword") String keyword);
 }
