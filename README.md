@@ -23,6 +23,8 @@ npm run dev
 ```txt
 http://127.0.0.1:5173
 ```
+<img width="432" height="130" alt="image" src="https://github.com/user-attachments/assets/af2ac3f2-11f6-4ed8-90f6-a5b649e05c91" />
+(다음과 같이 뜹니다)
 
 포트가 이미 사용 중이면 Vite가 다른 포트를 안내합니다.
 
