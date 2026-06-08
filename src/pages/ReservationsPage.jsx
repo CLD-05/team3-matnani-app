@@ -26,7 +26,7 @@ export function ReservationsPage({
     [products, reservations],
   );
   const activeReservations = enrichedReservations.filter(
-    (reservation) => reservation.status !== "COMPLETED",
+    (reservation) => !["COMPLETED", "CANCELED"].includes(reservation.status),
   );
 
   if (!currentUser) {

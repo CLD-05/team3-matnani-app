@@ -9,7 +9,7 @@ import {
   UserRound,
 } from "lucide-react";
 
-export function MyPage({ currentUser, products, onNavigate }) {
+export function MyPage({ currentUser, products, onNavigate, onNavigateToSales }) {
   if (!currentUser) {
     return (
       <section className="detail-empty">
@@ -44,22 +44,38 @@ export function MyPage({ currentUser, products, onNavigate }) {
       </div>
 
       <div className="mypage-stats">
-        <div>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          onClick={() => onNavigateToSales("open")}
+        >
           <strong>{sellingCount}</strong>
           <span>판매중</span>
-        </div>
-        <div>
+        </button>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          onClick={() => onNavigateToSales("reserved")}
+        >
           <strong>{reservedCount}</strong>
           <span>예약중</span>
-        </div>
-        <div>
+        </button>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          onClick={() => onNavigateToSales("completed")}
+        >
           <strong>{soldOutCount}</strong>
           <span>판매완료</span>
-        </div>
-        <div>
+        </button>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          onClick={() => onNavigateToSales("all")}
+        >
           <strong>{myProducts.length}</strong>
           <span>내 등록 상품</span>
-        </div>
+        </button>
       </div>
 
       <div className="mypage-grid">
@@ -86,6 +102,12 @@ export function MyPage({ currentUser, products, onNavigate }) {
           title="내가 쓴 후기"
           description="거래 후 작성한 후기를 확인합니다."
           onClick={() => onNavigate("/mypage/reviews")}
+        />
+        <MyPageMenuItem
+          icon={<Star size={22} />}
+          title="내게 달린 후기"
+          description="내 판매 상품에 남겨진 후기를 확인합니다."
+          onClick={() => onNavigate("/mypage/received-reviews")}
         />
         <MyPageMenuItem
           icon={<Bell size={22} />}

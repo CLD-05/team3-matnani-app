@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ImagePlus, Upload } from "lucide-react";
 import { categories, regionOptions } from "../data/constants";
 import { PageIntro } from "../components/PageIntro";
@@ -35,6 +35,33 @@ function createInitialForm() {
   };
 }
 
+function getNumericPrice(value) {
+  if (typeof value === "number") return value;
+  return Number(String(value || "").replace(/[^0-9]/g, ""));
+}
+
+function createEditForm(product) {
+  const fallback = createInitialForm();
+  const matchedRegion = regionOptions.find(
+    (region) => region.dong === product?.region || region.label === product?.region,
+  );
+
+  return {
+    ...fallback,
+    title: product?.title || fallback.title,
+    category: product?.category || fallback.category,
+    defectReason: product?.defectReason || fallback.defectReason,
+    description: product?.description || fallback.description,
+    originalPrice: String(product?.originalPriceValue || getNumericPrice(product?.originalPrice) || ""),
+    discountPrice: String(product?.priceValue || getNumericPrice(product?.price) || ""),
+    regionLabel: matchedRegion?.label || product?.region || fallback.regionLabel,
+    pickupPlace: product?.pickupPlace || fallback.pickupPlace,
+    pickupStartAt: product?.pickupStartAt || fallback.pickupStartAt,
+    pickupEndAt: product?.pickupEndAt || fallback.pickupEndAt,
+    expiresAt: product?.expiresAt || fallback.expiresAt,
+  };
+}
+
 function formatDateTimeLabel(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -61,11 +88,39 @@ function getMinutesUntil(value) {
   return Math.max(0, Math.round((date.getTime() - Date.now()) / (60 * 1000)));
 }
 
-export function ProductCreatePage({ currentUser, onAddProduct }) {
-  const [form, setForm] = useState(createInitialForm);
+function isBeforeDateTime(value, minValue) {
+  if (!value || !minValue) return false;
+  return new Date(value).getTime() < new Date(minValue).getTime();
+}
+
+function latestDateTimeLocal(...values) {
+  return values
+    .filter(Boolean)
+    .reduce((latest, value) => {
+      if (!latest) return value;
+      return new Date(value).getTime() > new Date(latest).getTime() ? value : latest;
+    }, "");
+}
+
+export function ProductCreatePage({
+  currentUser,
+  productToEdit,
+  onAddProduct,
+  onUpdateProduct,
+  onNavigate,
+}) {
+  const isEditMode = Boolean(productToEdit);
+  const [form, setForm] = useState(() =>
+    productToEdit ? createEditForm(productToEdit) : createInitialForm(),
+  );
   const [message, setMessage] = useState("");
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
+
+  useEffect(() => {
+    setForm(productToEdit ? createEditForm(productToEdit) : createInitialForm());
+    setMessage("");
+  }, [productToEdit]);
 
   const regionResults = regionOptions.filter((region) => {
     const keyword = regionKeyword.trim();
@@ -74,8 +129,34 @@ export function ProductCreatePage({ currentUser, onAddProduct }) {
   });
 
   const updateForm = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+
+      if (key === "pickupStartAt") {
+        if (isBeforeDateTime(next.pickupEndAt, value)) {
+          next.pickupEndAt = value;
+        }
+
+        const expiresMin = latestDateTimeLocal(value, next.pickupEndAt);
+        if (isBeforeDateTime(next.expiresAt, expiresMin)) {
+          next.expiresAt = expiresMin;
+        }
+      }
+
+      if (key === "pickupEndAt") {
+        const expiresMin = latestDateTimeLocal(next.pickupStartAt, value);
+        if (isBeforeDateTime(next.expiresAt, expiresMin)) {
+          next.expiresAt = expiresMin;
+        }
+      }
+
+      return next;
+    });
   };
+
+  const minDateTime = toDateTimeLocal(new Date());
+  const pickupEndMin = latestDateTimeLocal(minDateTime, form.pickupStartAt);
+  const expiresMin = latestDateTimeLocal(minDateTime, form.pickupStartAt, form.pickupEndAt);
 
   const discountRate = Math.max(
     0,
@@ -93,21 +174,42 @@ export function ProductCreatePage({ currentUser, onAddProduct }) {
       return;
     }
 
+    if (
+      isBeforeDateTime(form.pickupStartAt, minDateTime) ||
+      isBeforeDateTime(form.pickupEndAt, minDateTime) ||
+      isBeforeDateTime(form.expiresAt, minDateTime)
+    ) {
+      setMessage("이전 날짜는 선택할 수 없습니다.");
+      return;
+    }
+
+    if (isBeforeDateTime(form.pickupEndAt, form.pickupStartAt)) {
+      setMessage("픽업 종료 시간은 픽업 시작 이후로 선택해주세요.");
+      return;
+    }
+
+    if (isBeforeDateTime(form.expiresAt, latestDateTimeLocal(form.pickupStartAt, form.pickupEndAt))) {
+      setMessage("유통기한은 픽업 시작/종료 시간보다 빠를 수 없습니다.");
+      return;
+    }
+
     const selectedRegion = regionOptions.find((region) => region.label === form.regionLabel);
     const pickupLabel = formatDateTimeLabel(form.pickupStartAt);
     const pickupEndLabel = formatDateTimeLabel(form.pickupEndAt);
+    const shouldKeepOriginalPickup = isEditMode && !productToEdit?.pickupStartAt;
+    const shouldKeepOriginalExpiration = isEditMode && !productToEdit?.expiresAt;
 
-    onAddProduct({
-      id: Date.now(),
+    const productPayload = {
       title: form.title.trim(),
-      seller: currentUser?.nickname || "맛난이회원",
       region: selectedRegion?.dong || "성수동",
       category: form.category,
       defectReason: form.defectReason,
       description: form.description.trim(),
-      pickup: pickupLabel
-        ? `${pickupLabel}${pickupEndLabel ? ` - ${pickupEndLabel}` : ""} 픽업`
-        : "픽업 시간 미정",
+      pickup: shouldKeepOriginalPickup
+        ? productToEdit.pickup
+        : pickupLabel
+          ? `${pickupLabel}${pickupEndLabel ? ` - ${pickupEndLabel}` : ""} 픽업`
+          : "픽업 시간 미정",
       pickupPlace: form.pickupPlace.trim(),
       pickupStartAt: form.pickupStartAt,
       pickupEndAt: form.pickupEndAt,
@@ -118,11 +220,26 @@ export function ProductCreatePage({ currentUser, onAddProduct }) {
       discount: discountRate,
       price: `${Number(form.discountPrice).toLocaleString()}원`,
       priceValue: Number(form.discountPrice),
+      expiresInMinutes: shouldKeepOriginalExpiration
+        ? productToEdit.expiresInMinutes
+        : getMinutesUntil(form.expiresAt),
+    };
+
+    if (isEditMode) {
+      onUpdateProduct(productToEdit.id, productPayload);
+      setMessage("상품 정보가 수정되었습니다.");
+      onNavigate?.(`/products/${productToEdit.id}`);
+      return;
+    }
+
+    onAddProduct({
+      id: Date.now(),
+      ...productPayload,
+      seller: currentUser?.nickname || "맛난이회원",
       status: "판매중",
       statusTone: "sale",
       rating: "0.0",
       reviews: 0,
-      expiresInMinutes: getMinutesUntil(form.expiresAt),
       createdMinutes: 0,
       image:
         "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&w=900&q=80",
@@ -133,9 +250,13 @@ export function ProductCreatePage({ currentUser, onAddProduct }) {
   return (
     <>
       <PageIntro
-        kicker="상품 등록"
-        title="판매할 못난이 상품을 등록하세요"
-        description="이미지, 가격, 픽업 정보를 입력하면 장터에 상품이 노출됩니다."
+        kicker={isEditMode ? "상품 수정" : "상품 등록"}
+        title={isEditMode ? "등록한 상품 정보를 수정하세요" : "판매할 못난이 상품을 등록하세요"}
+        description={
+          isEditMode
+            ? "기존에 입력한 내용을 유지한 상태에서 필요한 정보만 바꿀 수 있습니다."
+            : "이미지, 가격, 픽업 정보를 입력하면 장터에 상품이 노출됩니다."
+        }
       />
       <section className="create-layout">
         <div className="upload-panel">
@@ -256,6 +377,7 @@ export function ProductCreatePage({ currentUser, onAddProduct }) {
               픽업 시작
               <input
                 type="datetime-local"
+                min={minDateTime}
                 value={form.pickupStartAt}
                 onChange={(event) => updateForm("pickupStartAt", event.target.value)}
               />
@@ -264,6 +386,7 @@ export function ProductCreatePage({ currentUser, onAddProduct }) {
               픽업 종료
               <input
                 type="datetime-local"
+                min={pickupEndMin}
                 value={form.pickupEndAt}
                 onChange={(event) => updateForm("pickupEndAt", event.target.value)}
               />
@@ -273,13 +396,14 @@ export function ProductCreatePage({ currentUser, onAddProduct }) {
             유통기한
             <input
               type="datetime-local"
+              min={expiresMin}
               value={form.expiresAt}
               onChange={(event) => updateForm("expiresAt", event.target.value)}
             />
           </label>
           {message && <p className="form-success">{message}</p>}
           <button className="auth-submit" type="submit">
-            상품 등록
+            {isEditMode ? "수정 완료" : "상품 등록"}
           </button>
         </form>
       </section>

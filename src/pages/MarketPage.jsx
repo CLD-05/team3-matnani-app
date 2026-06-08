@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import {
   categories,
@@ -11,9 +11,9 @@ import { PageIntro } from "../components/PageIntro";
 import { ProductCard } from "../components/ProductCard";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
 
-export function MarketPage({ products, onNavigate }) {
+export function MarketPage({ products, selectedRegionLabel, onNavigate }) {
   const [category, setCategory] = useState("전체");
-  const [neighborhood, setNeighborhood] = useState("전체");
+  const [neighborhood, setNeighborhood] = useState(selectedRegionLabel || "전체");
   const [status, setStatus] = useState("전체");
   const [sort, setSort] = useState("latest");
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -25,6 +25,12 @@ export function MarketPage({ products, onNavigate }) {
     if (!keyword) return true;
     return region.label.includes(keyword) || region.dong.includes(keyword);
   });
+
+  useEffect(() => {
+    if (selectedRegionLabel) {
+      setNeighborhood(selectedRegionLabel);
+    }
+  }, [selectedRegionLabel]);
 
   const filteredProducts = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
