@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Header } from "./components/Header";
 import { initialProducts } from "./data/products";
 import { initialReservations } from "./data/reservations";
+import { initialReviews } from "./data/reviews";
+import { notifications as initialNotifications } from "./data/activity";
 import { BusinessSignupPage } from "./pages/BusinessSignupPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -12,6 +14,11 @@ import { ReservationsPage } from "./pages/ReservationsPage";
 import { SignupPage } from "./pages/SignupPage";
 import { MyPage } from "./pages/MyPage";
 import { TransactionHistoryPage } from "./pages/TransactionHistoryPage";
+import { MyCommentsPage } from "./pages/MyCommentsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { MyReviewsPage } from "./pages/MyReviewsPage";
+import { ReviewNewPage } from "./pages/ReviewNewPage";
+import { SellerProfilePage } from "./pages/SellerProfilePage";
 
 const authPaths = ["/login", "/signup", "/signup/business"];
 
@@ -30,6 +37,8 @@ export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [products, setProducts] = useState(initialProducts);
   const [reservations, setReservations] = useState(initialReservations);
+  const [reviews, setReviews] = useState(initialReviews);
+  const [notifications, setNotifications] = useState(initialNotifications);
   const [currentUser, setCurrentUser] = useState(loadSavedUser);
 
   useEffect(() => {
@@ -126,16 +135,53 @@ export default function App() {
     );
   };
 
+  const addReview = (review) => {
+    setReviews((prev) => [review, ...prev]);
+  };
+
+  const updateReview = (reviewId, updates) => {
+    setReviews((prev) =>
+      prev.map((review) => (review.id === reviewId ? { ...review, ...updates } : review)),
+    );
+  };
+
+  const deleteReview = (reviewId) => {
+    setReviews((prev) => prev.filter((review) => review.id !== reviewId));
+  };
+
+  const markNotificationAsRead = (notificationId) => {
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === notificationId ? { ...notification, unread: false } : notification,
+      ),
+    );
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications((prev) =>
+      prev.map((notification) => ({ ...notification, unread: false })),
+    );
+  };
+
   const detailMatch = path.match(/^\/products\/([^/]+)$/);
+  const reviewNewMatch = path.match(/^\/reviews\/new\/([^/]+)$/);
+  const sellerProfileMatch = path.match(/^\/sellers\/([^/]+)$/);
   const detailProduct = detailMatch
     ? products.find((product) => String(product.id) === detailMatch[1])
     : null;
+  const sellerProfileName = sellerProfileMatch
+    ? decodeURIComponent(sellerProfileMatch[1])
+    : "";
+  const unreadNotificationCount = currentUser
+    ? notifications.filter((notification) => notification.unread).length
+    : 0;
 
   return (
     <main className="app">
       <Header
         path={path}
         currentUser={currentUser}
+        unreadNotificationCount={unreadNotificationCount}
         onNavigate={navigate}
         onLogout={logout}
       />
@@ -163,6 +209,7 @@ export default function App() {
           currentUser={currentUser}
           products={products}
           reservations={reservations}
+          reviews={reviews}
           onNavigate={navigate}
         />
       )}
@@ -176,7 +223,49 @@ export default function App() {
           onUpdateReservation={updateReservation}
         />
       )}
-      {path === "/products/new" && <ProductCreatePage onAddProduct={addProduct} />}
+      {path === "/mypage/comments" && (
+        <MyCommentsPage currentUser={currentUser} onNavigate={navigate} />
+      )}
+      {path === "/mypage/notifications" && (
+        <NotificationsPage
+          currentUser={currentUser}
+          notifications={notifications}
+          onNavigate={navigate}
+          onReadNotification={markNotificationAsRead}
+          onReadAllNotifications={markAllNotificationsAsRead}
+        />
+      )}
+      {path === "/mypage/reviews" && (
+        <MyReviewsPage
+          currentUser={currentUser}
+          reviews={reviews}
+          onNavigate={navigate}
+          onUpdateReview={updateReview}
+          onDeleteReview={deleteReview}
+        />
+      )}
+      {reviewNewMatch && (
+        <ReviewNewPage
+          reservationId={Number(reviewNewMatch[1])}
+          currentUser={currentUser}
+          products={products}
+          reservations={reservations}
+          reviews={reviews}
+          onNavigate={navigate}
+          onAddReview={addReview}
+        />
+      )}
+      {sellerProfileMatch && (
+        <SellerProfilePage
+          sellerName={sellerProfileName}
+          products={products}
+          reviews={reviews}
+          onNavigate={navigate}
+        />
+      )}
+      {path === "/products/new" && (
+        <ProductCreatePage currentUser={currentUser} onAddProduct={addProduct} />
+      )}
       {detailMatch && (
         <ProductDetailPage
           product={detailProduct}
@@ -191,7 +280,12 @@ export default function App() {
         path !== "/mypage/reservations" &&
         path !== "/mypage/purchases" &&
         path !== "/mypage/sales" &&
-        !detailMatch && (
+        path !== "/mypage/comments" &&
+        path !== "/mypage/notifications" &&
+        path !== "/mypage/reviews" &&
+        !detailMatch &&
+        !reviewNewMatch &&
+        !sellerProfileMatch && (
         <HomePage products={products} onNavigate={navigate} />
       )}
     </main>

@@ -88,8 +88,7 @@ export function ReservationsPage({
 function ReservationCard({ reservation, onNavigate, onUpdateReservation }) {
   const status = reservationStatuses[reservation.status];
   const product = reservation.product;
-  const canBuyerCancel =
-    reservation.status === "REQUESTED" || reservation.status === "ACCEPTED";
+  const canBuyerCancel = reservation.status === "REQUESTED";
 
   return (
     <article className="reservation-card">

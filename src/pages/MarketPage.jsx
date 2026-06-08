@@ -16,6 +16,7 @@ export function MarketPage({ products, onNavigate }) {
   const [neighborhood, setNeighborhood] = useState("전체");
   const [status, setStatus] = useState("전체");
   const [sort, setSort] = useState("latest");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
 
@@ -26,12 +27,24 @@ export function MarketPage({ products, onNavigate }) {
   });
 
   const filteredProducts = useMemo(() => {
+    const keyword = searchKeyword.trim().toLowerCase();
     const filtered = products.filter((product) => {
       const categoryMatched = category === "전체" || product.category === category;
       const selectedDong = regionOptions.find((region) => region.label === neighborhood)?.dong;
       const regionMatched = neighborhood === "전체" || product.region === selectedDong;
       const statusMatched = status === "전체" || product.status === status;
-      return categoryMatched && regionMatched && statusMatched;
+      const searchableText = [
+        product.title,
+        product.seller,
+        product.region,
+        product.category,
+        product.description,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const keywordMatched = !keyword || searchableText.includes(keyword);
+      return categoryMatched && regionMatched && statusMatched && keywordMatched;
     });
 
     return [...filtered].sort((a, b) => {
@@ -43,19 +56,24 @@ export function MarketPage({ products, onNavigate }) {
       if (sort === "rating_high") return Number(b.rating) - Number(a.rating);
       return a.createdMinutes - b.createdMinutes;
     });
-  }, [category, neighborhood, products, sort, status]);
+  }, [category, neighborhood, products, searchKeyword, sort, status]);
 
   return (
     <>
       <PageIntro
-        kicker="못난이 장터"
+        kicker="맛난이 장터"
         title="전체 상품을 조건에 맞게 찾아보세요"
         description="카테고리, 지역, 정렬 기준을 바꿔 원하는 상품을 빠르게 탐색할 수 있습니다."
       />
       <section className="market-toolbar" aria-label="상품 필터">
         <div className="search-box market-search">
           <Search size={22} />
-          <input type="search" placeholder="상품을 검색하세요" />
+          <input
+            type="search"
+            placeholder="상품명, 판매자, 지역을 검색하세요"
+            value={searchKeyword}
+            onChange={(event) => setSearchKeyword(event.target.value)}
+          />
         </div>
 
         <FilterGroup label="카테고리">

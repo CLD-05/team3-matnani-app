@@ -1,12 +1,13 @@
 import React from "react";
-import { ChevronDown, Leaf, MapPin, Menu, ShoppingBasket, UserRound } from "lucide-react";
+import { Bell, ChevronDown, Leaf, MapPin, Menu, ShoppingBasket, UserRound } from "lucide-react";
 
-export function Header({ path, currentUser, onNavigate, onLogout }) {
+export function Header({ path, currentUser, unreadNotificationCount, onNavigate, onLogout }) {
   const navItems = [
     { label: "홈", path: "/" },
-    { label: "못난이 장터", path: "/market" },
+    { label: "맛난이 장터", path: "/market" },
     { label: "상품 등록", path: "/products/new" },
   ];
+  const unreadCount = currentUser ? unreadNotificationCount : 0;
 
   return (
     <header className="site-header">
@@ -51,6 +52,17 @@ export function Header({ path, currentUser, onNavigate, onLogout }) {
           onClick={() => onNavigate(currentUser ? "/mypage/reservations" : "/login")}
         >
           <ShoppingBasket size={21} />
+        </button>
+        <button
+          className="icon-button notification-icon-button"
+          type="button"
+          aria-label={`알림 ${unreadCount}개`}
+          onClick={() => onNavigate(currentUser ? "/mypage/notifications" : "/login")}
+        >
+          <Bell size={21} />
+          {unreadCount > 0 && (
+            <span className="notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+          )}
         </button>
         {currentUser ? (
           <>

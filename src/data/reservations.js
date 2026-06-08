@@ -53,4 +53,13 @@ export const initialReservations = [
     pickupTime: "어제 17:30",
     status: "COMPLETED",
   },
+  {
+    id: 1004,
+    productId: 10,
+    buyerName: "성수직장인",
+    sellerName: "맛난이회원",
+    requestedAt: "오늘 12:10",
+    pickupTime: "오늘 18:30",
+    status: "REQUESTED",
+  },
 ];
