@@ -18,8 +18,6 @@ import { MyPage } from "./pages/MyPage";
 import { TransactionHistoryPage } from "./pages/TransactionHistoryPage";
 import { MyCommentsPage } from "./pages/MyCommentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
-import { MyReviewsPage } from "./pages/MyReviewsPage";
-import { ReviewNewPage } from "./pages/ReviewNewPage";
 import { SellerProfilePage } from "./pages/SellerProfilePage";
 
 const authPaths = ["/login", "/signup", "/signup/business"];
@@ -165,6 +163,13 @@ export default function App() {
     );
   };
 
+  const [salesFilter, setSalesFilter] = useState("all");
+
+  const navigateToSales = (tab) => {
+    setSalesFilter(tab);
+    navigate("/mypage/sales");
+  };
+
   const detailMatch = path.match(/^\/products\/([^/]+)$/);
   const reviewNewMatch = path.match(/^\/reviews\/new\/([^/]+)$/);
   const sellerProfileMatch = path.match(/^\/sellers\/([^/]+)$/);
@@ -194,7 +199,12 @@ export default function App() {
       )}
       {path === "/market" && <MarketPage products={products} onNavigate={navigate} />}
       {path === "/mypage" && (
-        <MyPage currentUser={currentUser} products={products} onNavigate={navigate} />
+        <MyPage
+          currentUser={currentUser}
+          products={products}
+          onNavigate={navigate}
+          onNavigateToSales={navigateToSales}
+        />
       )}
       {path === "/mypage/reservations" && (
         <ReservationsPage
@@ -221,6 +231,7 @@ export default function App() {
           currentUser={currentUser}
           products={products}
           reservations={reservations}
+          initialFilter={salesFilter}
           onNavigate={navigate}
           onUpdateReservation={updateReservation}
         />

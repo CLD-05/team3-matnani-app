@@ -52,11 +52,12 @@ export function TransactionHistoryPage({
   products,
   reservations,
   reviews,
+  initialFilter,
   onNavigate,
   onUpdateReservation,
 }) {
   const copy = pageCopy[type];
-  const [salesTab, setSalesTab] = useState("all");
+  const [salesTab, setSalesTab] = useState(initialFilter || "all");
 
   const transactions = useMemo(() => {
     if (type === "purchases") {

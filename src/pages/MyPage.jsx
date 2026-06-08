@@ -9,7 +9,7 @@ import {
   UserRound,
 } from "lucide-react";
 
-export function MyPage({ currentUser, products, onNavigate }) {
+export function MyPage({ currentUser, products, onNavigate, onNavigateToSales }) {
   if (!currentUser) {
     return (
       <section className="detail-empty">
@@ -44,22 +44,42 @@ export function MyPage({ currentUser, products, onNavigate }) {
       </div>
 
       <div className="mypage-stats">
-        <div>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          title="예약 안 된 판매중 상품 보기"
+          onClick={() => onNavigateToSales("open")}
+        >
           <strong>{sellingCount}</strong>
           <span>판매중</span>
-        </div>
-        <div>
+        </button>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          title="예약 내역 보기"
+          onClick={() => onNavigate("/mypage/reservations")}
+        >
           <strong>{reservedCount}</strong>
           <span>예약중</span>
-        </div>
-        <div>
+        </button>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          title="거래 완료된 상품 보기"
+          onClick={() => onNavigateToSales("completed")}
+        >
           <strong>{soldOutCount}</strong>
           <span>판매완료</span>
-        </div>
-        <div>
+        </button>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          title="내 등록 상품 전체 보기"
+          onClick={() => onNavigateToSales("all")}
+        >
           <strong>{myProducts.length}</strong>
           <span>내 등록 상품</span>
-        </div>
+        </button>
       </div>
 
       <div className="mypage-grid">

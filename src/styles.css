@@ -1102,12 +1102,44 @@ a {
   margin-top: 18px;
 }
 
-.mypage-stats div {
+.mypage-stats div,
+.mypage-stat-btn {
   padding: 20px;
   border: 1px solid #e0e8de;
   border-radius: 18px;
   background: #fff;
   text-align: center;
+}
+
+.mypage-stat-btn {
+  display: block;
+  width: 100%;
+  position: relative;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.mypage-stat-btn:hover {
+  border-color: #00a86b;
+  box-shadow: 0 8px 24px rgba(0, 168, 107, 0.14);
+  transform: translateY(-2px);
+}
+
+.mypage-stat-btn:hover strong {
+  color: #00a86b;
+}
+
+.mypage-stat-btn::after {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  content: "→";
+  font-size: 12px;
+  color: #b0bbb0;
+  transition: color 160ms ease;
+}
+
+.mypage-stat-btn:hover::after {
+  color: #00a86b;
 }
 
 .mypage-stats strong {
@@ -1143,6 +1175,17 @@ a {
   background: #fff;
   text-align: left;
   box-shadow: 0 14px 34px rgba(42, 68, 46, 0.06);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.mypage-menu-item:hover {
+  border-color: #00a86b;
+  box-shadow: 0 8px 24px rgba(0, 168, 107, 0.14);
+  transform: translateY(-2px);
+}
+
+.mypage-menu-item:hover > span {
+  background: #d6f5e6;
 }
 
 .mypage-menu-item > span {
