@@ -19,7 +19,7 @@ export function MyReviewsPage({
     );
   }
 
-  const myReviews = reviews.filter((r) => r.buyerName === currentUser.nickname);
+  const myReviews = reviews.filter((review) => review.buyerName === currentUser.nickname);
 
   return (
     <section className="review-list-page">
@@ -99,7 +99,7 @@ function ReviewCard({ review, onUpdateReview, onDeleteReview }) {
             className="review-icon-button"
             type="button"
             title="후기 수정"
-            onClick={() => setEditing((v) => !v)}
+            onClick={() => setEditing((value) => !value)}
           >
             <Pencil size={16} />
           </button>
@@ -134,7 +134,7 @@ function ReviewCard({ review, onUpdateReview, onDeleteReview }) {
           <textarea
             className="review-textarea"
             value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
+            onChange={(event) => setEditContent(event.target.value)}
             maxLength={500}
           />
           <div className="review-edit-buttons">

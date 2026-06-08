@@ -205,7 +205,11 @@ export function ProductDetailPage({ product, currentUser, onNavigate, onReserve 
             </div>
           </dl>
 
-          <div className="seller-card">
+          <button
+            className="seller-card seller-card-button"
+            type="button"
+            onClick={() => onNavigate(`/sellers/${encodeURIComponent(product.seller)}`)}
+          >
             <UserRound size={34} />
             <div>
               <strong>{product.seller}</strong>
@@ -215,7 +219,7 @@ export function ProductDetailPage({ product, currentUser, onNavigate, onReserve 
               <Star size={15} fill="currentColor" />
               {product.rating}
             </span>
-          </div>
+          </button>
 
           {message && <p className="form-success">{message}</p>}
 

@@ -2,8 +2,7 @@ import React from "react";
 import {
   Bell,
   ClipboardList,
-  HeartHandshake,
-  PackageCheck,
+  MessageSquareText,
   ShoppingBag,
   Star,
   Store,
@@ -23,9 +22,9 @@ export function MyPage({ currentUser, products, onNavigate }) {
   }
 
   const myProducts = products.filter((product) => product.seller === currentUser.nickname);
-  const sellingCount = products.filter((product) => product.status === "판매중").length;
-  const reservedCount = products.filter((product) => product.status === "예약중").length;
-  const soldOutCount = products.filter((product) => product.status === "판매완료").length;
+  const sellingCount = myProducts.filter((product) => product.status === "판매중").length;
+  const reservedCount = myProducts.filter((product) => product.status === "예약중").length;
+  const soldOutCount = myProducts.filter((product) => product.status === "판매완료").length;
 
   return (
     <section className="mypage">
@@ -92,22 +91,16 @@ export function MyPage({ currentUser, products, onNavigate }) {
           icon={<Bell size={22} />}
           title="알림"
           description="댓글, 예약, 상태 변경 알림을 확인합니다."
+          onClick={() => onNavigate("/mypage/notifications")}
         />
         <MyPageMenuItem
-          icon={<PackageCheck size={22} />}
-          title="상품 등록"
-          description="새 못난이 상품을 장터에 등록합니다."
-          onClick={() => onNavigate("/products/new")}
+          icon={<MessageSquareText size={22} />}
+          title="내가 등록한 댓글"
+          description="내 문의와 답글 상태를 확인합니다."
+          onClick={() => onNavigate("/mypage/comments")}
         />
       </div>
 
-      <section className="mypage-note">
-        <HeartHandshake size={22} />
-        <div>
-          <strong>다음 단계</strong>
-          <p>예약 관리는 구매자 화면과 판매자 화면을 분리해 더 쉽게 확인할 수 있습니다.</p>
-        </div>
-      </section>
     </section>
   );
 }

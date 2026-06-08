@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   CalendarCheck,
   ChevronLeft,
@@ -9,6 +9,19 @@ import {
   XCircle,
 } from "lucide-react";
 import { reservationStatuses } from "../data/reservations";
+
+const salesTabs = [
+  { value: "all", label: "내 등록 상품 전체" },
+  { value: "reserved", label: "예약 들어온 상품" },
+  { value: "completed", label: "거래 완료된 상품" },
+  { value: "open", label: "예약 안 된 상품" },
+];
+
+const productOnlyStatus = {
+  label: "예약 없음",
+  tone: "sale",
+  sellerText: "아직 예약 요청이 없는 판매중 상품입니다.",
+};
 
 const pageCopy = {
   purchases: {
@@ -43,22 +56,59 @@ export function TransactionHistoryPage({
   onUpdateReservation,
 }) {
   const copy = pageCopy[type];
+  const [salesTab, setSalesTab] = useState("all");
 
-  const transactions = useMemo(
-    () =>
-      reservations
-        .filter((reservation) =>
-          type === "purchases"
-            ? reservation.status === "COMPLETED" &&
-              reservation.buyerName === currentUser?.nickname
-            : reservation.sellerName === currentUser?.nickname,
+  const transactions = useMemo(() => {
+    if (type === "purchases") {
+      return reservations
+        .filter(
+          (reservation) =>
+            reservation.status === "COMPLETED" &&
+            reservation.buyerName === currentUser?.nickname,
         )
         .map((reservation) => ({
           ...reservation,
           product: products.find((product) => product.id === reservation.productId),
-        })),
+          hasReservation: true,
+        }));
+    }
+
+    return products
+      .filter((product) => product.seller === currentUser?.nickname)
+      .map((product) => {
+        const reservation = reservations.find(
+          (item) =>
+            item.productId === product.id &&
+            item.sellerName === currentUser?.nickname &&
+            item.status !== "CANCELED",
+        );
+
+        return {
+          id: reservation?.id || `product-${product.id}`,
+          productId: product.id,
+          buyerName: reservation?.buyerName || "",
+          sellerName: product.seller,
+          requestedAt: reservation?.requestedAt || "-",
+          pickupTime: reservation?.pickupTime || product.pickup.replace(" 픽업", ""),
+          status: reservation?.status || "NO_RESERVATION",
+          product,
+          hasReservation: Boolean(reservation),
+        };
+      });
+  },
     [currentUser?.nickname, products, reservations, type],
   );
+  const visibleTransactions =
+    type === "sales"
+      ? transactions.filter((transaction) => {
+        if (salesTab === "reserved") {
+          return transaction.hasReservation && transaction.status !== "COMPLETED";
+        }
+        if (salesTab === "completed") return transaction.status === "COMPLETED";
+        if (salesTab === "open") return !transaction.hasReservation;
+        return true;
+      })
+      : transactions;
 
   if (!currentUser) {
     return (
@@ -85,13 +135,40 @@ export function TransactionHistoryPage({
           <p>{copy.description}</p>
         </div>
         <div className="history-counter">
-          <strong>{transactions.length}</strong>
+          <strong>{visibleTransactions.length}</strong>
           <span>{copy.counterLabel}</span>
         </div>
       </div>
 
+      {type === "sales" && (
+        <div className="history-tabs" aria-label="판매 내역 필터">
+          {salesTabs.map((tab) => (
+            <button
+              key={tab.value}
+              className={salesTab === tab.value ? "active" : ""}
+              type="button"
+              onClick={() => setSalesTab(tab.value)}
+            >
+              {tab.label}
+              <strong>
+                {
+                  transactions.filter((transaction) => {
+                    if (tab.value === "reserved") {
+                      return transaction.hasReservation && transaction.status !== "COMPLETED";
+                    }
+                    if (tab.value === "completed") return transaction.status === "COMPLETED";
+                    if (tab.value === "open") return !transaction.hasReservation;
+                    return true;
+                  }).length
+                }
+              </strong>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="history-list">
-        {transactions.length === 0 && (
+        {visibleTransactions.length === 0 && (
           <div className="reservation-empty">
             <PackageCheck size={38} />
             <strong>{copy.emptyTitle}</strong>
@@ -105,7 +182,7 @@ export function TransactionHistoryPage({
             </button>
           </div>
         )}
-        {transactions.map((transaction) => (
+        {visibleTransactions.map((transaction) => (
           <HistoryCard
             key={transaction.id}
             type={type}
@@ -120,16 +197,20 @@ export function TransactionHistoryPage({
   );
 }
 
-function HistoryCard({ type, transaction, onNavigate, onUpdateReservation, reviews }) {
+function HistoryCard({ type, transaction, reviews, onNavigate, onUpdateReservation }) {
   const product = transaction.product;
-  const status = reservationStatuses[transaction.status];
+  const status =
+    transaction.status === "NO_RESERVATION"
+      ? productOnlyStatus
+      : reservationStatuses[transaction.status];
   const isSales = type === "sales";
   const canSellerRespond = isSales && transaction.status === "REQUESTED";
+  const canSellerCancel = isSales && transaction.status === "ACCEPTED";
   const canSellerComplete = isSales && transaction.status === "ACCEPTED";
   const canWriteReview =
     !isSales &&
     transaction.status === "COMPLETED" &&
-    !(reviews || []).some((r) => r.reservationId === transaction.id);
+    !(reviews || []).some((review) => review.reservationId === transaction.id);
 
   return (
     <article className="history-card">
@@ -142,7 +223,9 @@ function HistoryCard({ type, transaction, onNavigate, onUpdateReservation, revie
             <p className="seller">
               {type === "purchases"
                 ? `${transaction.sellerName} 판매`
-                : `${transaction.buyerName} 구매`}
+                : transaction.hasReservation
+                  ? `${transaction.buyerName} 예약`
+                  : "예약 대기중"}
             </p>
             <h2>{product?.title || "삭제된 상품"}</h2>
           </div>
@@ -160,9 +243,11 @@ function HistoryCard({ type, transaction, onNavigate, onUpdateReservation, revie
           </span>
           <span>
             <CalendarCheck size={16} />
-            요청 {transaction.requestedAt}
+            {transaction.hasReservation ? `요청 ${transaction.requestedAt}` : "예약 요청 없음"}
           </span>
         </div>
+
+        {isSales && <p className="reservation-guide">{status.sellerText}</p>}
 
         <div className="history-price-row">
           <div>
@@ -171,7 +256,11 @@ function HistoryCard({ type, transaction, onNavigate, onUpdateReservation, revie
           </div>
           <div>
             <span>{type === "purchases" ? "판매자" : "구매자"}</span>
-            <strong>{type === "purchases" ? transaction.sellerName : transaction.buyerName}</strong>
+            <strong>
+              {type === "purchases"
+                ? transaction.sellerName
+                : transaction.buyerName || "예약 없음"}
+            </strong>
           </div>
         </div>
 
@@ -194,17 +283,15 @@ function HistoryCard({ type, transaction, onNavigate, onUpdateReservation, revie
               후기 작성
             </button>
           )}
-          {!isSales &&
-            transaction.status === "COMPLETED" &&
-            !canWriteReview && (
-              <button
-                className="reservation-ghost-button"
-                type="button"
-                onClick={() => onNavigate("/mypage/reviews")}
-              >
-                후기 보기
-              </button>
-            )}
+          {!isSales && transaction.status === "COMPLETED" && !canWriteReview && (
+            <button
+              className="reservation-ghost-button"
+              type="button"
+              onClick={() => onNavigate("/mypage/reviews")}
+            >
+              후기 보기
+            </button>
+          )}
           {canSellerRespond && (
             <>
               <button
@@ -223,6 +310,16 @@ function HistoryCard({ type, transaction, onNavigate, onUpdateReservation, revie
                 수락
               </button>
             </>
+          )}
+          {canSellerCancel && (
+            <button
+              className="reservation-danger-button"
+              type="button"
+              onClick={() => onUpdateReservation(transaction.id, "CANCELED")}
+            >
+              <XCircle size={17} />
+              취소
+            </button>
           )}
           {canSellerComplete && (
             <button

@@ -4,8 +4,22 @@ import { categories, regionOptions } from "../data/constants";
 import { PageIntro } from "../components/PageIntro";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
 
-export function ProductCreatePage({ onAddProduct }) {
-  const [form, setForm] = useState({
+function toDateTimeLocal(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join("-") + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function createInitialForm() {
+  const now = new Date();
+  const pickupStart = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  const pickupEnd = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  return {
     title: "못난이 당근 1kg",
     category: "농수산물",
     defectReason: "SHAPE_BAD",
@@ -15,10 +29,40 @@ export function ProductCreatePage({ onAddProduct }) {
     discountPrice: "3000",
     regionLabel: "서울 성동구 성수동",
     pickupPlace: "성수동 주민센터 앞",
-    pickupStartAt: "2026-06-05T17:00",
-    pickupEndAt: "2026-06-05T20:00",
-    expiresAt: "2026-06-06T12:00",
-  });
+    pickupStartAt: toDateTimeLocal(pickupStart),
+    pickupEndAt: toDateTimeLocal(pickupEnd),
+    expiresAt: toDateTimeLocal(expiresAt),
+  };
+}
+
+function formatDateTimeLabel(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const targetStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDiff = Math.round((targetStart - todayStart) / (24 * 60 * 60 * 1000));
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const dayLabel =
+    dayDiff === 0
+      ? "오늘"
+      : dayDiff === 1
+        ? "내일"
+        : `${date.getMonth() + 1}월 ${date.getDate()}일`;
+
+  return `${dayLabel} ${hours}:${minutes}`;
+}
+
+function getMinutesUntil(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 0;
+  return Math.max(0, Math.round((date.getTime() - Date.now()) / (60 * 1000)));
+}
+
+export function ProductCreatePage({ currentUser, onAddProduct }) {
+  const [form, setForm] = useState(createInitialForm);
   const [message, setMessage] = useState("");
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
@@ -49,13 +93,26 @@ export function ProductCreatePage({ onAddProduct }) {
       return;
     }
 
+    const selectedRegion = regionOptions.find((region) => region.label === form.regionLabel);
+    const pickupLabel = formatDateTimeLabel(form.pickupStartAt);
+    const pickupEndLabel = formatDateTimeLabel(form.pickupEndAt);
+
     onAddProduct({
       id: Date.now(),
-      title: form.title,
-      seller: "맛난이회원",
-      region: regionOptions.find((region) => region.label === form.regionLabel)?.dong || "성수동",
+      title: form.title.trim(),
+      seller: currentUser?.nickname || "맛난이회원",
+      region: selectedRegion?.dong || "성수동",
       category: form.category,
-      pickup: "오늘 17:00 픽업",
+      defectReason: form.defectReason,
+      description: form.description.trim(),
+      pickup: pickupLabel
+        ? `${pickupLabel}${pickupEndLabel ? ` - ${pickupEndLabel}` : ""} 픽업`
+        : "픽업 시간 미정",
+      pickupPlace: form.pickupPlace.trim(),
+      pickupStartAt: form.pickupStartAt,
+      pickupEndAt: form.pickupEndAt,
+      pickupWindow: pickupEndLabel ? `${pickupLabel} - ${pickupEndLabel}` : pickupLabel,
+      expiresAt: form.expiresAt,
       originalPrice: `${Number(form.originalPrice).toLocaleString()}원`,
       originalPriceValue: Number(form.originalPrice),
       discount: discountRate,
@@ -65,7 +122,7 @@ export function ProductCreatePage({ onAddProduct }) {
       statusTone: "sale",
       rating: "0.0",
       reviews: 0,
-      expiresInMinutes: 180,
+      expiresInMinutes: getMinutesUntil(form.expiresAt),
       createdMinutes: 0,
       image:
         "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&w=900&q=80",

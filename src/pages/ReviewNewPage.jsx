@@ -27,16 +27,22 @@ export function ReviewNewPage({
     );
   }
 
-  const reservation = reservations.find((r) => r.id === reservationId);
-  const product = reservation ? products.find((p) => p.id === reservation.productId) : null;
-  const alreadyReviewed = reviews.some((r) => r.reservationId === reservationId);
+  const reservation = reservations.find((item) => item.id === reservationId);
+  const product = reservation
+    ? products.find((item) => item.id === reservation.productId)
+    : null;
+  const alreadyReviewed = reviews.some((review) => review.reservationId === reservationId);
 
   if (!reservation || reservation.status !== "COMPLETED") {
     return (
       <section className="detail-empty">
         <h1>후기를 작성할 수 없는 예약입니다.</h1>
         <p>거래 완료된 예약에만 후기를 작성할 수 있습니다.</p>
-        <button className="auth-link-button" type="button" onClick={() => onNavigate("/mypage/purchases")}>
+        <button
+          className="auth-link-button"
+          type="button"
+          onClick={() => onNavigate("/mypage/purchases")}
+        >
           구매 내역으로 돌아가기
         </button>
       </section>
@@ -58,7 +64,11 @@ export function ReviewNewPage({
     return (
       <section className="detail-empty">
         <h1>이미 후기를 작성한 거래입니다.</h1>
-        <button className="auth-link-button" type="button" onClick={() => onNavigate("/mypage/reviews")}>
+        <button
+          className="auth-link-button"
+          type="button"
+          onClick={() => onNavigate("/mypage/reviews")}
+        >
           내가 쓴 후기 보기
         </button>
       </section>
@@ -93,8 +103,8 @@ export function ReviewNewPage({
     );
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = (event) => {
+    event.preventDefault();
     if (rating === 0) {
       setError("별점을 선택해주세요.");
       return;
@@ -182,7 +192,7 @@ export function ReviewNewPage({
             className="review-textarea"
             placeholder="상품 상태, 픽업 경험 등을 자유롭게 적어주세요. (5자 이상)"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(event) => setContent(event.target.value)}
             maxLength={500}
           />
           <span className="review-char-count">{content.length} / 500</span>
