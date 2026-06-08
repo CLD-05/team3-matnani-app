@@ -11,7 +11,7 @@ import { PageIntro } from "../components/PageIntro";
 import { ProductCard } from "../components/ProductCard";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
 
-export function MarketPage({ products }) {
+export function MarketPage({ products, onNavigate }) {
   const [category, setCategory] = useState("전체");
   const [neighborhood, setNeighborhood] = useState("전체");
   const [status, setStatus] = useState("전체");
@@ -130,7 +130,11 @@ export function MarketPage({ products }) {
         </div>
         <div className="product-grid">
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onClick={() => onNavigate(`/products/${product.id}`)}
+            />
           ))}
         </div>
       </section>

@@ -2,9 +2,20 @@ import React from "react";
 import { CalendarClock, MapPin, Star, Timer } from "lucide-react";
 import { formatTimeLeft } from "../utils/time";
 
-export function ProductCard({ product, compact = false }) {
+export function ProductCard({ product, compact = false, onClick }) {
   return (
-    <article className={`product-card ${compact ? "compact-card" : ""}`}>
+    <article
+      className={`product-card ${compact ? "compact-card" : ""}`}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (onClick && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+    >
       <div className="image-wrap">
         <img src={product.image} alt={product.title} />
         <span className={`status-badge ${product.statusTone}`}>{product.status}</span>

@@ -167,4 +167,25 @@ export const initialProducts = [
     image:
       "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?auto=format&fit=crop&w=900&q=80",
   },
+  {
+    id: 9,
+    title: "못난이 애호박 2개",
+    seller: "맛난이회원",
+    region: "성수동",
+    category: "농수산물",
+    pickup: "어제 17:30 픽업",
+    originalPrice: "4,500원",
+    originalPriceValue: 4500,
+    discount: 44,
+    price: "2,500원",
+    priceValue: 2500,
+    status: "판매완료",
+    statusTone: "soldout",
+    rating: "5.0",
+    reviews: 1,
+    expiresInMinutes: 0,
+    createdMinutes: 110,
+    image:
+      "https://images.unsplash.com/photo-1601493700631-2b16ec4b4716?auto=format&fit=crop&w=900&q=80",
+  },
 ];

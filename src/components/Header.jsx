@@ -44,12 +44,21 @@ export function Header({ path, currentUser, onNavigate, onLogout }) {
           성수동
           <ChevronDown size={16} />
         </button>
-        <button className="icon-button" type="button" aria-label="예약 장바구니">
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="예약 장바구니"
+          onClick={() => onNavigate(currentUser ? "/mypage/reservations" : "/login")}
+        >
           <ShoppingBasket size={21} />
         </button>
         {currentUser ? (
           <>
-            <button className="login-button user-chip" type="button">
+            <button
+              className="login-button user-chip"
+              type="button"
+              onClick={() => onNavigate("/mypage")}
+            >
               <UserRound size={17} />
               {currentUser.nickname}
             </button>

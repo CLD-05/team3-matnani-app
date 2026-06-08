@@ -46,7 +46,11 @@ export function HomePage({ products, onNavigate }) {
       >
         <div className="product-grid">
           {recommendedProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onClick={() => onNavigate(`/products/${product.id}`)}
+            />
           ))}
         </div>
       </HomeSection>
@@ -59,7 +63,12 @@ export function HomePage({ products, onNavigate }) {
       >
         <div className="urgent-strip">
           {urgentProducts.map((product) => (
-            <ProductCard key={product.id} product={product} compact />
+            <ProductCard
+              key={product.id}
+              product={product}
+              compact
+              onClick={() => onNavigate(`/products/${product.id}`)}
+            />
           ))}
         </div>
       </HomeSection>
@@ -72,7 +81,11 @@ export function HomePage({ products, onNavigate }) {
       >
         <div className="product-grid">
           {previewProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onClick={() => onNavigate(`/products/${product.id}`)}
+            />
           ))}
         </div>
       </HomeSection>
