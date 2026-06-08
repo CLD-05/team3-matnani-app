@@ -1,16 +1,23 @@
 import React, { useMemo, useState } from "react";
-import { Bell, ChevronLeft, MoreVertical, Settings } from "lucide-react";
+import { Bell, CheckCircle2, ChevronLeft, Circle, Settings } from "lucide-react";
 
 const notificationFilters = ["전체", "예약", "댓글", "거래"];
 
 export function NotificationsPage({
   currentUser,
   notifications,
+  notificationEnabled,
   onNavigate,
   onReadNotification,
   onReadAllNotifications,
+  onToggleNotificationEnabled,
+  onDeleteNotifications,
+  onDeleteAllNotifications,
 }) {
   const [filter, setFilter] = useState("전체");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
   const unreadCount = notifications.filter((notification) => notification.unread).length;
 
   const visibleNotifications = useMemo(
@@ -18,12 +25,47 @@ export function NotificationsPage({
       notifications.filter((notification) =>
         filter === "전체" ? true : notification.type === filter,
       ),
-    [filter],
+    [filter, notifications],
   );
 
   const handleNotificationOpen = (notification) => {
+    if (deleteMode) {
+      toggleSelectedNotification(notification.id);
+      return;
+    }
+
     onReadNotification(notification.id);
     onNavigate(notification.targetPath);
+  };
+
+  const toggleSelectedNotification = (notificationId) => {
+    setSelectedIds((prev) =>
+      prev.includes(notificationId)
+        ? prev.filter((id) => id !== notificationId)
+        : [...prev, notificationId],
+    );
+  };
+
+  const startDeleteMode = () => {
+    setDeleteMode(true);
+    setSettingsOpen(false);
+    setSelectedIds([]);
+  };
+
+  const cancelDeleteMode = () => {
+    setDeleteMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0) return;
+    onDeleteNotifications(selectedIds);
+    cancelDeleteMode();
+  };
+
+  const handleDeleteAll = () => {
+    onDeleteAllNotifications();
+    cancelDeleteMode();
   };
 
   if (!currentUser) {
@@ -56,9 +98,35 @@ export function NotificationsPage({
             >
               전체 읽음
             </button>
-            <button type="button" aria-label="알림 설정">
+            <div className="notification-settings-wrap">
+              <button
+                className={settingsOpen ? "notification-settings-button active" : "notification-settings-button"}
+                type="button"
+                aria-label="알림 설정"
+                aria-expanded={settingsOpen}
+                onClick={() => setSettingsOpen((prev) => !prev)}
+              >
               <Settings size={22} />
-            </button>
+              </button>
+              {settingsOpen && (
+                <div className="notification-settings-popover">
+                  <button
+                    className="notification-toggle-row"
+                    type="button"
+                    onClick={() => onToggleNotificationEnabled(!notificationEnabled)}
+                  >
+                    <span>알림</span>
+                    <span className={notificationEnabled ? "notification-switch on" : "notification-switch"}>
+                      <strong>{notificationEnabled ? "ON" : "OFF"}</strong>
+                      <i />
+                    </span>
+                  </button>
+                  <button className="notification-delete-menu" type="button" onClick={startDeleteMode}>
+                    알림 삭제
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -99,14 +167,31 @@ export function NotificationsPage({
                 </div>
                 <p>{notification.content}</p>
               </div>
-              <button
-                className="notification-more"
-                type="button"
-                aria-label="알림 더보기"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <MoreVertical size={17} />
-              </button>
+              {deleteMode && (
+                <button
+                  className={
+                    selectedIds.includes(notification.id)
+                      ? "notification-select-button selected"
+                      : "notification-select-button"
+                  }
+                  type="button"
+                  aria-label={
+                    selectedIds.includes(notification.id)
+                      ? "선택 해제"
+                      : "삭제할 알림 선택"
+                  }
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleSelectedNotification(notification.id);
+                  }}
+                >
+                  {selectedIds.includes(notification.id) ? (
+                    <CheckCircle2 size={24} fill="currentColor" />
+                  ) : (
+                    <Circle size={24} />
+                  )}
+                </button>
+              )}
             </article>
           ))}
           {visibleNotifications.length === 0 && (
@@ -116,6 +201,30 @@ export function NotificationsPage({
             </div>
           )}
         </div>
+
+        {deleteMode && (
+          <div className="notification-delete-bar">
+            <button
+              className="notification-delete-selected"
+              type="button"
+              disabled={selectedIds.length === 0}
+              onClick={handleDeleteSelected}
+            >
+              선택 알림 삭제
+            </button>
+            <button
+              className="notification-delete-all"
+              type="button"
+              disabled={notifications.length === 0}
+              onClick={handleDeleteAll}
+            >
+              전체 알림 삭제
+            </button>
+            <button className="notification-delete-cancel" type="button" onClick={cancelDeleteMode}>
+              취소
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

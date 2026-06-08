@@ -49,6 +49,7 @@ export default function App() {
   const [reservations, setReservations] = useState(initialReservations);
   const [reviews, setReviews] = useState(initialReviews);
   const [notifications, setNotifications] = useState(initialNotifications);
+  const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [salesFilter, setSalesFilter] = useState("all");
   const [selectedRegionLabel, setSelectedRegionLabel] = useState("서울 성동구 성수동");
   const [currentUser, setCurrentUser] = useState(loadSavedUser);
@@ -199,6 +200,16 @@ export default function App() {
     );
   };
 
+  const deleteNotifications = (notificationIds) => {
+    setNotifications((prev) =>
+      prev.filter((notification) => !notificationIds.includes(notification.id)),
+    );
+  };
+
+  const deleteAllNotifications = () => {
+    setNotifications([]);
+  };
+
   const detailMatch = path.match(/^\/products\/([^/]+)$/);
   const editProductMatch = path.match(/^\/products\/([^/]+)\/edit$/);
   const reviewNewMatch = path.match(/^\/reviews\/new\/([^/]+)$/);
@@ -214,7 +225,7 @@ export default function App() {
     ? decodeURIComponent(sellerProfileMatch[1])
     : "";
   const unreadNotificationCount = currentUser
-    ? notifications.filter((notification) => notification.unread).length
+    ? notifications.filter((notification) => notificationEnabled && notification.unread).length
     : 0;
 
   return (
@@ -285,9 +296,13 @@ export default function App() {
         <NotificationsPage
           currentUser={currentUser}
           notifications={notifications}
+          notificationEnabled={notificationEnabled}
           onNavigate={navigate}
           onReadNotification={markNotificationAsRead}
           onReadAllNotifications={markAllNotificationsAsRead}
+          onToggleNotificationEnabled={setNotificationEnabled}
+          onDeleteNotifications={deleteNotifications}
+          onDeleteAllNotifications={deleteAllNotifications}
         />
       )}
       {path === "/mypage/reviews" && (
