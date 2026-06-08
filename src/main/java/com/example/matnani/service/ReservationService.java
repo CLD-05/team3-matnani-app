@@ -1,5 +1,6 @@
 package com.example.matnani.service;
 
+import com.example.matnani.config.DuplicateReservationException;
 import com.example.matnani.domain.entity.*;
 import com.example.matnani.dto.response.ReservationResponse;
 import com.example.matnani.repository.*;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,7 +29,7 @@ public class ReservationService {
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
 
         if (!product.getStatus().equals(ProductStatus.ON_SALE)) {
-            throw new RuntimeException("예약 가능한 상품이 아닙니다.");
+            throw new DuplicateReservationException("이미 예약 중이거나 판매 완료된 상품입니다.");
         }
 
         User buyer = userRepository.findById(buyerId)
@@ -37,19 +39,18 @@ public class ReservationService {
                 .product(product)
                 .buyer(buyer)
                 .seller(product.getSeller())
-                .finalPrice(product.getDiscountPrice())  // 서버에서 자동 세팅
+                .finalPrice(product.getDiscountPrice())
                 .status(ReservationStatus.REQUESTED)
                 .build();
 
         reservationRepository.save(reservation);
-
-        // 상품 상태 즉시 RESERVED로 변경
         product.updateStatus(ProductStatus.RESERVED);
 
+        // RESERVATION 알림 - product_id NULL
         notificationService.createNotification(
                 product.getSeller(),
                 NotificationType.RESERVATION,
-                product,
+                null,
                 reservation
         );
 
@@ -79,19 +80,19 @@ public class ReservationService {
 
         reservationRepository.save(updated);
 
-        // 상태에 따라 상품 status 변경
         Product product = reservation.getProduct();
         if (status == ReservationStatus.CANCELED) {
-            product.updateStatus(ProductStatus.ON_SALE);  // 취소 시 복구
+            product.updateStatus(ProductStatus.ON_SALE);
         } else if (status == ReservationStatus.COMPLETED) {
-            product.updateStatus(ProductStatus.SOLD_OUT);  // 완료 시 판매종료
+            product.updateStatus(ProductStatus.SOLD_OUT);
         }
 
+        // STATUS_CHANGE 알림 - product_id NULL
         notificationService.createNotification(
                 reservation.getBuyer(),
                 NotificationType.STATUS_CHANGE,
-                reservation.getProduct(),
-                reservation
+                null,
+                updated
         );
 
         return ReservationResponse.from(updated);
@@ -106,11 +107,33 @@ public class ReservationService {
                 .collect(Collectors.toList());
     }
 
-    // 예약 내역 (전체)
-    public List<ReservationResponse> getReservationHistory(Long userId) {
-        return reservationRepository
-                .findByBuyerId(userId)
-                .stream()
+    // 예약 내역 (status/role 필터)
+    public List<ReservationResponse> getReservationHistory(Long userId,
+                                                           ReservationStatus status,
+                                                           String role) {
+        List<Reservation> reservations;
+
+        if ("seller".equals(role)) {
+            reservations = status != null
+                    ? reservationRepository.findBySellerIdAndStatus(userId, status)
+                    : reservationRepository.findBySellerId(userId);
+        } else if ("buyer".equals(role)) {
+            reservations = status != null
+                    ? reservationRepository.findByBuyerIdAndStatus(userId, status)
+                    : reservationRepository.findByBuyerId(userId);
+        } else {
+            List<Reservation> asBuyer = status != null
+                    ? reservationRepository.findByBuyerIdAndStatus(userId, status)
+                    : reservationRepository.findByBuyerId(userId);
+            List<Reservation> asSeller = status != null
+                    ? reservationRepository.findBySellerIdAndStatus(userId, status)
+                    : reservationRepository.findBySellerId(userId);
+            reservations = new ArrayList<>();
+            reservations.addAll(asBuyer);
+            reservations.addAll(asSeller);
+        }
+
+        return reservations.stream()
                 .map(ReservationResponse::from)
                 .collect(Collectors.toList());
     }

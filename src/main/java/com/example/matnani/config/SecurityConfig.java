@@ -15,6 +15,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 @EnableWebSecurity
@@ -32,29 +33,26 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                // 인증 없이 접근 가능
-                                "/api/auth/**",
-
-                                // 상품
-                                "/api/products",
-                                "/api/products/{id}",
-                                "/api/products/search",
-                                "/api/products/time-sale",
-
-                                // 지역
-                                "/api/regions",
-
-                                // 유저 (판매자 프로필, 후기)
-                                "/api/users/{id}",
-                                "/api/users/{userId}/reviews",
-
-                                // 후기 전체 목록
-                                "/api/reviews",
-
-                                // Swagger
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/api/auth/signup",
+                                "/api/auth/signup/business",
+                                "/api/auth/login",
+                                "/api/auth/refresh"
                         ).permitAll()
+
+                        // ↓ 구체적인 경로 먼저 (me는 인증 필요)
+                        .requestMatchers("/api/users/me").authenticated()
+                        .requestMatchers("/api/users/me/**").authenticated()
+
+                        // ↓ 일반 경로는 공개
+                        .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/{userId}/reviews").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/{id}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/time-sale").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/regions").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/**/*.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter,
@@ -74,10 +72,12 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of("http://localhost:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
+
 }

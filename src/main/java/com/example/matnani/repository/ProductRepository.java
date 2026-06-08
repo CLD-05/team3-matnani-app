@@ -12,7 +12,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findBySellerId(Long sellerId);
 
     @Query("SELECT p FROM Product p WHERE " +
+            "(:regionId IS NULL OR p.region.id = :regionId) AND " +
+            "(:status IS NULL OR p.status = :status) AND " +
+            "(:category IS NULL OR p.category = :category)")
+    List<Product> findWithFilters(
+            @Param("regionId") Long regionId,
+            @Param("status") ProductStatus status,
+            @Param("category") ProductCategory category);
+
+    @Query("SELECT p FROM Product p WHERE " +
             "(p.title LIKE %:keyword% OR p.description LIKE %:keyword%) " +
-            "AND p.status = 'ON_SALE'")   // SELLING → ON_SALE
+            "AND p.status = 'ON_SALE'")
     List<Product> searchByKeyword(@Param("keyword") String keyword);
 }

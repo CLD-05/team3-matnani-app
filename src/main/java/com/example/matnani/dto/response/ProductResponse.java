@@ -10,7 +10,9 @@ import java.util.List;
 @Getter
 public class ProductResponse {
     private Long id;
+    private Long sellerId;
     private String sellerNickname;
+    private String sellerRegionName;
     private String regionName;
     private String title;
     private String description;
@@ -26,11 +28,30 @@ public class ProductResponse {
     private LocalDateTime expiresAt;
     private List<String> imageUrls;
     private LocalDateTime createdAt;
+    private ActiveReservationDto activeReservation;
+
+    @Getter
+    public static class ActiveReservationDto {
+        private Long reservationId;
+        private ReservationStatus status;
+        private Long buyerId;
+
+        public static ActiveReservationDto of(Long reservationId, ReservationStatus status, Long buyerId) {
+            ActiveReservationDto dto = new ActiveReservationDto();
+            dto.reservationId = reservationId;
+            dto.status = status;
+            dto.buyerId = buyerId;
+            return dto;
+        }
+    }
 
     public static ProductResponse from(Product product, List<String> imageUrls) {
         ProductResponse response = new ProductResponse();
         response.id = product.getId();
+        response.sellerId = product.getSeller().getId();
         response.sellerNickname = product.getSeller().getNickname();
+        response.sellerRegionName = product.getSeller().getRegion() != null
+                ? product.getSeller().getRegion().getName() : null;
         response.regionName = product.getRegion().getName();
         response.title = product.getTitle();
         response.description = product.getDescription();
@@ -47,5 +68,9 @@ public class ProductResponse {
         response.imageUrls = imageUrls;
         response.createdAt = product.getCreatedAt();
         return response;
+    }
+
+    public void setActiveReservation(ActiveReservationDto activeReservation) {
+        this.activeReservation = activeReservation;
     }
 }

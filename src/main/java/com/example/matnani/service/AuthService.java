@@ -11,7 +11,6 @@ import com.example.matnani.repository.BusinessProfileRepository;
 import com.example.matnani.repository.RegionRepository;
 import com.example.matnani.repository.UserRepository;
 import static com.example.matnani.domain.enums.Enums.*;
-
 import com.example.matnani.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +28,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final BusinessNumberService businessNumberService;
 
+    // 일반 회원가입
     @Transactional
     public void signup(SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -43,14 +43,14 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
                 .phone(request.getPhone())
-                .role(UserRole.NORMAL)
-                .role(UserRole.BUSINESS)
+                .role(UserRole.NORMAL)   // 버그 수정
                 .region(region)
                 .build();
 
         userRepository.save(user);
     }
 
+    // 사업자 회원가입
     @Transactional
     public void businessSignup(BusinessSignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -58,15 +58,10 @@ public class AuthService {
         }
         if (businessProfileRepository.existsByBusinessNumber(request.getBusinessNumber())) {
             throw new RuntimeException("이미 등록된 사업자번호입니다.");
-
-
-            // 사업자번호 검증
         }
         if (!businessNumberService.verify(request.getBusinessNumber())) {
             throw new RuntimeException("유효하지 않은 사업자번호입니다.");
         }
-
-
 
         Region region = regionRepository.findById(request.getRegionId())
                 .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
@@ -87,21 +82,44 @@ public class AuthService {
                 .businessNumber(request.getBusinessNumber())
                 .businessName(request.getBusinessName())
                 .ownerName(request.getOwnerName())
-                .verifyStatus(VerifyStatus.PENDING)
+                .verifyStatus(VerifyStatus.VERIFIED)
                 .build();
 
         businessProfileRepository.save(profile);
     }
 
+    // 로그인
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("이메일 또는 비밀번호가 틀렸습니다."));
+                .orElseThrow(() -> new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다."));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("이메일 또는 비밀번호가 틀렸습니다.");
+            throw new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        String token = jwtService.generateToken(user);
-        return new LoginResponse(token, "Bearer", user.getNickname(), user.getRole().name());
+        return LoginResponse.builder()
+                .accessToken(jwtService.generateToken(user))
+                .refreshToken(jwtService.generateRefreshToken(user))
+                .nickname(user.getNickname())
+                .role(user.getRole().name())
+                .build();
+    }
+
+    // 토큰 재발급
+    public LoginResponse refresh(String refreshToken) {
+        if (!jwtService.isValid(refreshToken) || !jwtService.isRefreshToken(refreshToken)) {
+            throw new RuntimeException("유효하지 않은 refresh token입니다.");
+        }
+
+        Long userId = jwtService.getUserId(refreshToken);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+        return LoginResponse.builder()
+                .accessToken(jwtService.generateToken(user))
+                .refreshToken(jwtService.generateRefreshToken(user))
+                .nickname(user.getNickname())
+                .role(user.getRole().name())
+                .build();
     }
 }

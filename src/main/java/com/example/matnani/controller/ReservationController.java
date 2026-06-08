@@ -44,7 +44,8 @@ public class ReservationController {
     public ResponseEntity<ApiResponse<List<ReservationResponse>>> getMyReservations(
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = Long.parseLong(userDetails.getUsername());
-        return ResponseEntity.ok(ApiResponse.success(reservationService.getReservationHistory(userId)));
+        return ResponseEntity.ok(ApiResponse.success(
+                reservationService.getReservationHistory(userId, null, "buyer")));
     }
 
     @Getter

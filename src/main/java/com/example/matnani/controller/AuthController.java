@@ -4,6 +4,7 @@ import com.example.matnani.dto.request.*;
 import com.example.matnani.dto.response.ApiResponse;
 import com.example.matnani.dto.response.LoginResponse;
 import com.example.matnani.service.AuthService;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,5 +31,22 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(ApiResponse.success(authService.login(request), "로그인 성공"));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout() {
+        // Redis 블랙리스트 미구현 - 클라이언트에서 토큰 삭제로 처리
+        return ResponseEntity.ok(ApiResponse.success(null, "로그아웃 성공"));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refresh(@RequestBody RefreshRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                authService.refresh(request.getRefreshToken()), "토큰 재발급 성공"));
+    }
+
+    @Getter
+    static class RefreshRequest {
+        private String refreshToken;
     }
 }

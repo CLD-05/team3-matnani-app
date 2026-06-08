@@ -18,6 +18,9 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
+
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
@@ -52,5 +55,27 @@ public class JwtService {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+
+    // refresh token 생성 (7일)
+    public String generateRefreshToken(User user) {
+        return Jwts.builder()
+                .setSubject(String.valueOf(user.getId()))
+                .claim("type", "refresh")
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    // refresh token 여부 확인
+    public boolean isRefreshToken(String token) {
+        try {
+            Claims claims = getClaims(token);
+            return "refresh".equals(claims.get("type", String.class));
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
     }
 }

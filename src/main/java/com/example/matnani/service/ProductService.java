@@ -1,4 +1,3 @@
-// ProductService.java
 package com.example.matnani.service;
 
 import com.example.matnani.domain.entity.*;
@@ -9,6 +8,8 @@ import static com.example.matnani.domain.enums.Enums.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,24 +21,50 @@ public class ProductService {
     private final ProductImageRepository productImageRepository;
     private final RegionRepository regionRepository;
     private final UserRepository userRepository;
+    private final ReservationRepository reservationRepository;
 
-    // 홈 피드 - 지역 기반 상품 목록
-    public List<ProductResponse> getProductsByRegion(Long regionId) {
-        return productRepository
-                .findByRegionIdAndStatus(regionId, ProductStatus.ON_SALE)
-                .stream()
+    // 홈 피드 - 필터/정렬/페이징
+    public List<ProductResponse> getProducts(Long regionId, ProductCategory category,
+                                             String sort, ProductStatus status,
+                                             int page, int size) {
+        ProductStatus filterStatus = status != null ? status : ProductStatus.ON_SALE;
+
+        List<Product> products = productRepository.findWithFilters(regionId, filterStatus, category);
+
+        switch (sort) {
+            case "near_expiry" -> products.sort((a, b) -> {
+                if (a.getExpiresAt() == null) return 1;
+                if (b.getExpiresAt() == null) return -1;
+                return a.getExpiresAt().compareTo(b.getExpiresAt());
+            });
+            case "discount_high" -> products.sort((a, b) -> {
+                if (a.getDiscountRate() == null) return 1;
+                if (b.getDiscountRate() == null) return -1;
+                return b.getDiscountRate().compareTo(a.getDiscountRate());
+            });
+            default -> products.sort((a, b) -> {
+                if (a.getCreatedAt() == null) return 1;
+                if (b.getCreatedAt() == null) return -1;
+                return b.getCreatedAt().compareTo(a.getCreatedAt());
+            });
+        }
+
+        int fromIndex = page * size;
+        if (fromIndex >= products.size()) return List.of();
+        int toIndex = Math.min(fromIndex + size, products.size());
+        products = products.subList(fromIndex, toIndex);
+
+        return products.stream()
                 .map(product -> {
                     List<String> imageUrls = productImageRepository
                             .findByProductIdOrderBySortOrder(product.getId())
-                            .stream()
-                            .map(ProductImage::getImageUrl)
-                            .collect(Collectors.toList());
+                            .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
                     return ProductResponse.from(product, imageUrls);
                 })
                 .collect(Collectors.toList());
     }
 
-    // 타임세일 - expires_at 임박 상품
+    // 타임세일
     public List<ProductResponse> getTimeSaleProducts(Long regionId) {
         return productRepository
                 .findByRegionIdAndStatus(regionId, ProductStatus.ON_SALE)
@@ -47,24 +74,32 @@ public class ProductService {
                 .map(product -> {
                     List<String> imageUrls = productImageRepository
                             .findByProductIdOrderBySortOrder(product.getId())
-                            .stream()
-                            .map(ProductImage::getImageUrl)
-                            .collect(Collectors.toList());
+                            .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
                     return ProductResponse.from(product, imageUrls);
                 })
                 .collect(Collectors.toList());
     }
 
-    // 상품 상세
+    // 상품 상세 - activeReservation 포함
     public ProductResponse getProduct(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
+
         List<String> imageUrls = productImageRepository
                 .findByProductIdOrderBySortOrder(productId)
-                .stream()
-                .map(ProductImage::getImageUrl)
-                .collect(Collectors.toList());
-        return ProductResponse.from(product, imageUrls);
+                .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
+
+        ProductResponse response = ProductResponse.from(product, imageUrls);
+
+        if (product.getStatus() == ProductStatus.RESERVED) {
+            reservationRepository.findByProductIdAndStatusIn(
+                            productId, List.of(ReservationStatus.REQUESTED, ReservationStatus.ACCEPTED))
+                    .ifPresent(r -> response.setActiveReservation(
+                            ProductResponse.ActiveReservationDto.of(
+                                    r.getId(), r.getStatus(), r.getBuyer().getId())));
+        }
+
+        return response;
     }
 
     // 상품 등록
@@ -75,6 +110,12 @@ public class ProductService {
         Region region = regionRepository.findById(request.getRegionId())
                 .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
 
+        // discount_rate 서버에서 자동 계산
+        BigDecimal discountRate = BigDecimal.valueOf(
+                (request.getOriginalPrice() - request.getDiscountPrice()) * 100.0
+                        / request.getOriginalPrice()
+        ).setScale(2, RoundingMode.HALF_UP);
+
         Product product = Product.builder()
                 .seller(seller)
                 .region(region)
@@ -84,7 +125,7 @@ public class ProductService {
                 .defectReason(request.getDefectReason())
                 .originalPrice(request.getOriginalPrice())
                 .discountPrice(request.getDiscountPrice())
-                .discountRate(request.getDiscountRate())
+                .discountRate(discountRate)
                 .pickupPlace(request.getPickupPlace())
                 .pickupStartAt(request.getPickupStartAt())
                 .pickupEndAt(request.getPickupEndAt())
@@ -92,7 +133,20 @@ public class ProductService {
                 .build();
 
         productRepository.save(product);
-        return ProductResponse.from(product, List.of());
+
+        if (request.getImageUrls() != null) {
+            for (int i = 0; i < request.getImageUrls().size(); i++) {
+                ProductImage image = ProductImage.builder()
+                        .product(product)
+                        .imageUrl(request.getImageUrls().get(i))
+                        .sortOrder(i)
+                        .build();
+                productImageRepository.save(image);
+            }
+        }
+
+        List<String> imageUrls = request.getImageUrls() != null ? request.getImageUrls() : List.of();
+        return ProductResponse.from(product, imageUrls);
     }
 
     // 상품 수정
@@ -112,9 +166,7 @@ public class ProductService {
 
         List<String> imageUrls = productImageRepository
                 .findByProductIdOrderBySortOrder(productId)
-                .stream()
-                .map(ProductImage::getImageUrl)
-                .collect(Collectors.toList());
+                .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
 
         return ProductResponse.from(product, imageUrls);
     }
@@ -126,12 +178,30 @@ public class ProductService {
                 .map(product -> {
                     List<String> imageUrls = productImageRepository
                             .findByProductIdOrderBySortOrder(product.getId())
-                            .stream()
-                            .map(ProductImage::getImageUrl)
-                            .collect(Collectors.toList());
+                            .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
                     return ProductResponse.from(product, imageUrls);
                 })
                 .collect(Collectors.toList());
+    }
+
+    // 상품 상태 변경
+    @Transactional
+    public void updateProductStatus(Long userId, Long productId, ProductStatus status) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
+
+        if (!product.getSeller().getId().equals(userId)) {
+            throw new RuntimeException("권한이 없습니다.");
+        }
+
+        if (product.getStatus().equals(ProductStatus.RESERVED)) {
+            throw new RuntimeException("예약 중인 상품은 상태를 변경할 수 없습니다.");
+        }
+        if (product.getStatus().equals(ProductStatus.SOLD_OUT)) {
+            throw new RuntimeException("판매 완료된 상품은 상태를 변경할 수 없습니다.");
+        }
+
+        product.updateStatus(status);
     }
 
     // 상품 삭제
@@ -142,6 +212,10 @@ public class ProductService {
 
         if (!product.getSeller().getId().equals(userId)) {
             throw new RuntimeException("삭제 권한이 없습니다.");
+        }
+
+        if (!product.getStatus().equals(ProductStatus.ON_SALE)) {
+            throw new RuntimeException("판매 중인 상품만 삭제할 수 있습니다.");
         }
 
         productImageRepository.deleteByProductId(productId);

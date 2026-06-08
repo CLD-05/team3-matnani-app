@@ -1,10 +1,12 @@
 package com.example.matnani.dto.request;
 
+
 import static com.example.matnani.domain.enums.Enums.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -21,4 +23,5 @@ public class ProductRequest {
     private LocalDateTime pickupStartAt;
     private LocalDateTime pickupEndAt;
     private LocalDateTime expiresAt;
+    private List<String> imageUrls;  // ← 추가
 }

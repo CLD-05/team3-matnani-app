@@ -3,6 +3,7 @@ package com.example.matnani.controller;
 import com.example.matnani.dto.response.*;
 import com.example.matnani.service.ReservationService;
 import com.example.matnani.service.ReviewService;
+import static com.example.matnani.domain.enums.Enums.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,12 +35,15 @@ public class MypageController {
         return ResponseEntity.ok(ApiResponse.success(reservationService.getSalesHistory(userId)));
     }
 
-    // 예약 내역
+    // 예약 내역 (status/role 필터)
     @GetMapping("/reservations")
     public ResponseEntity<ApiResponse<List<ReservationResponse>>> getReservations(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) ReservationStatus status,
+            @RequestParam(required = false) String role) {
         Long userId = Long.parseLong(userDetails.getUsername());
-        return ResponseEntity.ok(ApiResponse.success(reservationService.getReservationHistory(userId)));
+        return ResponseEntity.ok(ApiResponse.success(
+                reservationService.getReservationHistory(userId, status, role)));
     }
 
     // 내가 쓴 후기
