@@ -2,13 +2,16 @@ import React, { useEffect, useState } from "react";
 import { Header } from "./components/Header";
 import { initialProducts } from "./data/products";
 import { initialReservations } from "./data/reservations";
+import { initialReviews } from "./data/reviews";
 import { BusinessSignupPage } from "./pages/BusinessSignupPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MarketPage } from "./pages/MarketPage";
+import { MyReviewsPage } from "./pages/MyReviewsPage";
 import { ProductCreatePage } from "./pages/ProductCreatePage";
 import { ProductDetailPage } from "./pages/ProductDetailPage";
 import { ReservationsPage } from "./pages/ReservationsPage";
+import { ReviewNewPage } from "./pages/ReviewNewPage";
 import { SignupPage } from "./pages/SignupPage";
 import { MyPage } from "./pages/MyPage";
 import { TransactionHistoryPage } from "./pages/TransactionHistoryPage";
@@ -30,6 +33,7 @@ export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [products, setProducts] = useState(initialProducts);
   const [reservations, setReservations] = useState(initialReservations);
+  const [reviews, setReviews] = useState(initialReviews);
   const [currentUser, setCurrentUser] = useState(loadSavedUser);
 
   useEffect(() => {
@@ -126,7 +130,22 @@ export default function App() {
     );
   };
 
+  const addReview = (review) => {
+    setReviews((prev) => [review, ...prev]);
+  };
+
+  const updateReview = (reviewId, updates) => {
+    setReviews((prev) =>
+      prev.map((r) => (r.id === reviewId ? { ...r, ...updates } : r)),
+    );
+  };
+
+  const deleteReview = (reviewId) => {
+    setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+  };
+
   const detailMatch = path.match(/^\/products\/([^/]+)$/);
+  const reviewNewMatch = path.match(/^\/reviews\/new\/([^/]+)$/);
   const detailProduct = detailMatch
     ? products.find((product) => String(product.id) === detailMatch[1])
     : null;
@@ -163,6 +182,7 @@ export default function App() {
           currentUser={currentUser}
           products={products}
           reservations={reservations}
+          reviews={reviews}
           onNavigate={navigate}
         />
       )}
@@ -177,6 +197,26 @@ export default function App() {
         />
       )}
       {path === "/products/new" && <ProductCreatePage onAddProduct={addProduct} />}
+      {path === "/mypage/reviews" && (
+        <MyReviewsPage
+          currentUser={currentUser}
+          reviews={reviews}
+          onNavigate={navigate}
+          onUpdateReview={updateReview}
+          onDeleteReview={deleteReview}
+        />
+      )}
+      {reviewNewMatch && (
+        <ReviewNewPage
+          reservationId={Number(reviewNewMatch[1])}
+          currentUser={currentUser}
+          products={products}
+          reservations={reservations}
+          reviews={reviews}
+          onNavigate={navigate}
+          onAddReview={addReview}
+        />
+      )}
       {detailMatch && (
         <ProductDetailPage
           product={detailProduct}
@@ -186,12 +226,13 @@ export default function App() {
         />
       )}
       {!authPaths.includes(path) &&
-        !["/market", "/products/new"].includes(path) &&
+        !["/market", "/products/new", "/mypage/reviews"].includes(path) &&
         path !== "/mypage" &&
         path !== "/mypage/reservations" &&
         path !== "/mypage/purchases" &&
         path !== "/mypage/sales" &&
-        !detailMatch && (
+        !detailMatch &&
+        !reviewNewMatch && (
         <HomePage products={products} onNavigate={navigate} />
       )}
     </main>

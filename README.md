@@ -56,6 +56,19 @@ http://127.0.0.1:5173
   - 일반 회원가입
   - 사업자 회원가입
 
+- 예약 내역
+  - 구매자 예약 요청 확인
+  - 예약 취소 처리
+
+- 구매/판매 내역
+  - 거래 완료 구매 내역 조회
+  - 판매 예약 수락/거절/완료 처리
+
+- 후기
+  - 거래 완료 상품에 별점(1~5) + 내용 후기 작성
+  - 후기 수정 / 삭제
+  - 내가 쓴 후기 목록 조회
+
 ## 파일 트리
 
 ```txt
@@ -78,13 +91,21 @@ team3-matnani-app/
     ├── pages/
     │   ├── HomePage.jsx
     │   ├── MarketPage.jsx
+    │   ├── ProductDetailPage.jsx
     │   ├── ProductCreatePage.jsx
     │   ├── LoginPage.jsx
     │   ├── SignupPage.jsx
-    │   └── BusinessSignupPage.jsx
+    │   ├── BusinessSignupPage.jsx
+    │   ├── MyPage.jsx
+    │   ├── ReservationsPage.jsx
+    │   ├── TransactionHistoryPage.jsx
+    │   ├── ReviewNewPage.jsx
+    │   └── MyReviewsPage.jsx
     ├── data/
     │   ├── constants.js
-    │   └── products.js
+    │   ├── products.js
+    │   ├── reservations.js
+    │   └── reviews.js
     └── utils/
         └── time.js
 ```
@@ -111,9 +132,9 @@ React 앱의 진입점입니다.
 
 - 현재 경로 관리
 - 로그인 상태 관리
-- 더미 상품 목록 상태 관리
+- 더미 상품/예약/후기 목록 상태 관리
 - 페이지 전환 처리
-- 상품 등록 시 더미 상품 추가
+- 상품 등록, 예약, 예약 상태 변경, 후기 추가/수정/삭제 처리
 
 ### `src/styles.css`
 
@@ -125,6 +146,8 @@ React 앱의 진입점입니다.
 - 장터 필터
 - 상품 등록 폼
 - 로그인/회원가입 화면
+- 예약/거래 내역 화면
+- 후기 작성/목록 화면
 - 반응형 스타일
 
 ## `src/components`
@@ -148,10 +171,16 @@ React 앱의 진입점입니다.
 | --- | --- |
 | `HomePage.jsx` | 홈 화면입니다. 배너, 추천 상품, 마감 임박 상품, 상품 미리보기를 보여줍니다. |
 | `MarketPage.jsx` | 못난이 장터 화면입니다. 상품 목록과 필터/정렬 기능을 제공합니다. |
+| `ProductDetailPage.jsx` | 상품 상세 화면입니다. 이미지, 가격, 픽업 정보, 비밀 댓글, 예약 버튼을 표시합니다. |
 | `ProductCreatePage.jsx` | 상품 등록 화면입니다. 더미데이터가 기본 입력되어 있고, 등록 시 더미 상품이 추가됩니다. |
 | `LoginPage.jsx` | 로그인 화면입니다. 테스트 계정으로 임시 로그인할 수 있습니다. |
 | `SignupPage.jsx` | 일반 회원가입 화면입니다. |
 | `BusinessSignupPage.jsx` | 사업자 회원가입 화면입니다. |
+| `MyPage.jsx` | 마이페이지 화면입니다. 프로필, 통계, 메뉴 목록을 제공합니다. |
+| `ReservationsPage.jsx` | 예약 내역 화면입니다. 구매자 예약 상태 확인 및 취소 처리를 합니다. |
+| `TransactionHistoryPage.jsx` | 구매/판매 내역 화면입니다. `type` prop으로 구매자/판매자 뷰를 전환합니다. |
+| `ReviewNewPage.jsx` | 후기 작성 화면입니다. 거래 완료 예약에 대해 별점과 내용을 입력합니다. |
+| `MyReviewsPage.jsx` | 내가 쓴 후기 목록 화면입니다. 후기 수정 및 삭제 기능을 제공합니다. |
 
 ## `src/data`
 
@@ -161,6 +190,8 @@ React 앱의 진입점입니다.
 | --- | --- |
 | `constants.js` | 카테고리, 지역 목록, 상품 상태, 정렬 옵션, 테스트 계정을 관리합니다. |
 | `products.js` | 화면 확인용 더미 상품 목록을 관리합니다. |
+| `reservations.js` | 더미 예약 목록과 예약 상태 레이블/색상 정보를 관리합니다. |
+| `reviews.js` | 화면 확인용 더미 후기 목록을 관리합니다. |
 
 ## `src/utils`
 
@@ -179,19 +210,41 @@ React 앱의 진입점입니다.
 
 현재 로그인은 백엔드 API 연결 전 화면 확인을 위한 임시 로그인입니다.
 
+## 라우팅 구조
+
+| 경로 | 화면 | 인증 필요 |
+| --- | --- | --- |
+| `/` | 홈 / 상품 목록 | ❌ |
+| `/market` | 못난이 장터 | ❌ |
+| `/products/:productId` | 상품 상세 | ❌ |
+| `/products/new` | 상품 등록 | ✅ |
+| `/login` | 로그인 | ❌ |
+| `/signup` | 일반 회원가입 | ❌ |
+| `/signup/business` | 사업자 회원가입 | ❌ |
+| `/mypage` | 마이페이지 | ✅ |
+| `/mypage/reservations` | 예약 내역 | ✅ |
+| `/mypage/purchases` | 구매 내역 | ✅ |
+| `/mypage/sales` | 판매 내역 | ✅ |
+| `/mypage/reviews` | 내가 쓴 후기 | ✅ |
+| `/reviews/new/:reservationId` | 후기 작성 | ✅ |
+
 ## 현재 구현 상태
 
 - 백엔드 API 연결 전 단계입니다.
-- 상품 목록, 로그인, 회원가입, 상품 등록은 더미 데이터 기반으로 동작합니다.
-- 상품 등록 시 새 상품은 React 상태에만 임시 추가됩니다.
-- 새로고침하면 등록한 더미 상품은 사라집니다.
+- 모든 기능은 더미 데이터 기반으로 동작합니다.
+- 상품 등록, 예약, 후기 작성/수정/삭제는 React 상태에만 반영됩니다.
+- 새로고침하면 변경 사항은 초기 더미 데이터로 복원됩니다.
 
 ## 추후 연결 예정 API
 
-- `GET /api/products`
-- `GET /api/products/{productId}`
-- `POST /api/auth/login`
-- `POST /api/auth/signup`
-- `POST /api/products`
+- `GET /api/products`, `GET /api/products/{productId}`
+- `POST /api/auth/login`, `POST /api/auth/signup`, `POST /api/auth/logout`
+- `POST /api/products`, `PATCH /api/products/{productId}`, `DELETE /api/products/{productId}`
 - `GET /api/regions`
 - `POST /api/images/presigned-url`
+- `POST /api/products/{productId}/reservations`
+- `PATCH /api/reservations/{reservationId}/status`
+- `GET /api/mypage/reservations`, `GET /api/mypage/purchases`, `GET /api/mypage/sales`
+- `POST /api/reservations/{reservationId}/reviews`
+- `PATCH /api/reviews/{reviewId}`, `DELETE /api/reviews/{reviewId}`
+- `GET /api/mypage/reviews`

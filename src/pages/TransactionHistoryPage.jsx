@@ -38,6 +38,7 @@ export function TransactionHistoryPage({
   currentUser,
   products,
   reservations,
+  reviews,
   onNavigate,
   onUpdateReservation,
 }) {
@@ -109,6 +110,7 @@ export function TransactionHistoryPage({
             key={transaction.id}
             type={type}
             transaction={transaction}
+            reviews={reviews}
             onNavigate={onNavigate}
             onUpdateReservation={onUpdateReservation}
           />
@@ -118,12 +120,16 @@ export function TransactionHistoryPage({
   );
 }
 
-function HistoryCard({ type, transaction, onNavigate, onUpdateReservation }) {
+function HistoryCard({ type, transaction, onNavigate, onUpdateReservation, reviews }) {
   const product = transaction.product;
   const status = reservationStatuses[transaction.status];
   const isSales = type === "sales";
   const canSellerRespond = isSales && transaction.status === "REQUESTED";
   const canSellerComplete = isSales && transaction.status === "ACCEPTED";
+  const canWriteReview =
+    !isSales &&
+    transaction.status === "COMPLETED" &&
+    !(reviews || []).some((r) => r.reservationId === transaction.id);
 
   return (
     <article className="history-card">
@@ -179,11 +185,26 @@ function HistoryCard({ type, transaction, onNavigate, onUpdateReservation }) {
               상품 상세
             </button>
           )}
-          {type === "purchases" && (
-            <button className="reservation-ghost-button" type="button">
+          {canWriteReview && (
+            <button
+              className="reservation-primary-button"
+              type="button"
+              onClick={() => onNavigate(`/reviews/new/${transaction.id}`)}
+            >
               후기 작성
             </button>
           )}
+          {!isSales &&
+            transaction.status === "COMPLETED" &&
+            !canWriteReview && (
+              <button
+                className="reservation-ghost-button"
+                type="button"
+                onClick={() => onNavigate("/mypage/reviews")}
+              >
+                후기 보기
+              </button>
+            )}
           {canSellerRespond && (
             <>
               <button

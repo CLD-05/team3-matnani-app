@@ -86,6 +86,7 @@ export function MyPage({ currentUser, products, onNavigate }) {
           icon={<Star size={22} />}
           title="내가 쓴 후기"
           description="거래 후 작성한 후기를 확인합니다."
+          onClick={() => onNavigate("/mypage/reviews")}
         />
         <MyPageMenuItem
           icon={<Bell size={22} />}
