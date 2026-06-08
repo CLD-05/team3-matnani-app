@@ -3302,6 +3302,85 @@ a {
   color: #a1aaa1;
 }
 
+.signup-region-field {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: 14px;
+}
+
+.signup-region-field > span {
+  color: #26302a;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.signup-region-field .region-toggle {
+  width: 100%;
+  max-width: none;
+  height: 52px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.auth-form .region-search-panel {
+  border-radius: 14px;
+  border-color: #dce5da;
+  box-shadow: none;
+}
+
+.auth-form .region-search-box {
+  height: 52px;
+  margin: 12px;
+  border: 2px solid #202522;
+  border-radius: 6px;
+}
+
+.auth-form .region-search-box:focus-within {
+  border-color: #202522;
+  box-shadow: none;
+}
+
+.auth-form .region-search-box input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 15px;
+}
+
+.auth-form .region-search-box input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.auth-form .region-result-list {
+  max-height: 240px;
+  padding: 0 12px 12px;
+}
+
+.auth-form .region-result-item {
+  min-height: 58px;
+  gap: 12px;
+}
+
+.auth-form .region-result-item strong {
+  font-size: 15px;
+}
+
+.auth-form .region-result-item small {
+  font-size: 12px;
+}
+
+.auth-form .region-result-item em {
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
 .test-account-box {
   padding: 13px 15px;
   border: 1px solid #cde9d6;
@@ -3516,7 +3595,8 @@ a {
     grid-template-columns: 1fr;
   }
 
-  .create-region-field {
+  .create-region-field,
+  .signup-region-field {
     grid-template-columns: 1fr;
   }
 

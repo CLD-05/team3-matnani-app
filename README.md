@@ -123,6 +123,12 @@ src/
     PageIntro.jsx
     FilterGroup.jsx
     RegionSearchPanel.jsx
+  api/
+    auth.js
+    products.js
+    reservations.js
+    reviews.js
+    notifications.js
   pages/
     HomePage.jsx
     MarketPage.jsx
@@ -153,6 +159,7 @@ src/
 ## 현재 데이터 관리 방식
 
 백엔드 연결 전이라 모든 주요 데이터는 `App.jsx`에서 React 상태로 관리합니다.
+상태 변경 요청은 `src/api` 폴더의 더미 API 함수를 거치도록 분리되어 있습니다.
 
 ```txt
 products       상품 목록
@@ -166,22 +173,35 @@ currentUser    로그인 사용자
 
 ## 백엔드 연결 시 교체할 주요 함수
 
-`src/App.jsx`의 아래 함수들은 현재 프론트 상태만 변경합니다.
-백엔드 연결 시 API 호출로 교체하면 됩니다.
+`src/api` 폴더의 아래 함수들은 현재 더미 응답을 반환합니다.
+백엔드 연결 시 각 함수 내부를 실제 API 호출로 교체하면 됩니다.
 
 ```txt
-login
-logout
-addProduct
-updateProduct
-deleteProduct
-reserveProduct
-updateReservation
-addReview
-updateReview
-deleteReview
-markNotificationAsRead
-markAllNotificationsAsRead
+auth.js
+  getSavedUser
+  loginUser
+  logoutUser
+
+products.js
+  createProduct
+  updateProduct
+  deleteProduct
+
+reservations.js
+  createReservation
+  updateReservationStatus
+
+reviews.js
+  createReview
+  updateReview
+  deleteReview
+
+notifications.js
+  updateNotificationSetting
+  markNotificationAsRead
+  markAllNotificationsAsRead
+  deleteNotifications
+  deleteAllNotifications
 ```
 
 ## 현재 프론트 상태 흐름

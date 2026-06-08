@@ -167,7 +167,7 @@ export function ProductCreatePage({
     ) || 0,
   );
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (Number(form.discountPrice) >= Number(form.originalPrice)) {
       setMessage("할인가는 원가보다 낮아야 합니다.");
@@ -226,13 +226,13 @@ export function ProductCreatePage({
     };
 
     if (isEditMode) {
-      onUpdateProduct(productToEdit.id, productPayload);
+      await onUpdateProduct(productToEdit.id, productPayload);
       setMessage("상품 정보가 수정되었습니다.");
       onNavigate?.(`/products/${productToEdit.id}`);
       return;
     }
 
-    onAddProduct({
+    await onAddProduct({
       id: Date.now(),
       ...productPayload,
       seller: currentUser?.nickname || "맛난이회원",

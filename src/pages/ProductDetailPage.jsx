@@ -92,7 +92,7 @@ export function ProductDetailPage({
       ? "유통기한 임박"
       : "모양 이상";
 
-  const handleReserve = () => {
+  const handleReserve = async () => {
     if (!currentUser) {
       onNavigate("/login");
       return;
@@ -102,11 +102,11 @@ export function ProductDetailPage({
       return;
     }
     if (!isOnSale) return;
-    onReserve(product.id, currentUser);
+    await onReserve(product.id, currentUser);
     setMessage("예약 요청이 완료되었습니다.");
   };
 
-  const handleDeleteProduct = () => {
+  const handleDeleteProduct = async () => {
     if (!isOnSale) {
       setMessage("판매중 상태인 상품만 삭제할 수 있습니다.");
       return;
@@ -114,7 +114,7 @@ export function ProductDetailPage({
 
     if (!window.confirm("이 상품을 삭제할까요?")) return;
 
-    onDeleteProduct(product.id);
+    await onDeleteProduct(product.id);
     onNavigate("/market");
   };
 

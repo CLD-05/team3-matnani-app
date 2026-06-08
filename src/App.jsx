@@ -1,4 +1,26 @@
 import React, { useEffect, useState } from "react";
+import { getSavedUser, loginUser, logoutUser } from "./api/auth";
+import {
+  deleteAllNotifications as requestDeleteAllNotifications,
+  deleteNotifications as requestDeleteNotifications,
+  markAllNotificationsAsRead as requestMarkAllNotificationsAsRead,
+  markNotificationAsRead as requestMarkNotificationAsRead,
+  updateNotificationSetting,
+} from "./api/notifications";
+import {
+  createProduct,
+  deleteProduct as requestDeleteProduct,
+  updateProduct as requestUpdateProduct,
+} from "./api/products";
+import {
+  createReservation,
+  updateReservationStatus,
+} from "./api/reservations";
+import {
+  createReview,
+  deleteReview as requestDeleteReview,
+  updateReview as requestUpdateReview,
+} from "./api/reviews";
 import { Header } from "./components/Header";
 import { initialProducts } from "./data/products";
 import { initialReservations } from "./data/reservations";
@@ -32,17 +54,6 @@ function isProtectedPath(path) {
   );
 }
 
-function loadSavedUser() {
-  try {
-    const savedUser = localStorage.getItem("matnaniUser");
-    return savedUser ? JSON.parse(savedUser) : null;
-  } catch {
-    localStorage.removeItem("matnaniUser");
-    localStorage.removeItem("matnaniToken");
-    return null;
-  }
-}
-
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [products, setProducts] = useState(initialProducts);
@@ -52,7 +63,7 @@ export default function App() {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [salesFilter, setSalesFilter] = useState("all");
   const [selectedRegionLabel, setSelectedRegionLabel] = useState("서울 성동구 성수동");
-  const [currentUser, setCurrentUser] = useState(loadSavedUser);
+  const [currentUser, setCurrentUser] = useState(getSavedUser);
 
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname);
@@ -79,134 +90,141 @@ export default function App() {
     navigate("/mypage/sales");
   };
 
-  const login = (user) => {
-    localStorage.setItem("matnaniToken", "mock-access-token");
-    localStorage.setItem("matnaniUser", JSON.stringify(user));
-    setCurrentUser(user);
+  const login = async (user) => {
+    const loggedInUser = await loginUser(user);
+    setCurrentUser(loggedInUser);
     navigate("/");
   };
 
-  const logout = () => {
-    localStorage.removeItem("matnaniToken");
-    localStorage.removeItem("matnaniUser");
+  const logout = async () => {
+    await logoutUser();
     setCurrentUser(null);
     navigate("/");
   };
 
-  const addProduct = (product) => {
-    setProducts((prev) => [product, ...prev]);
+  const addProduct = async (product) => {
+    const createdProduct = await createProduct(product);
+    setProducts((prev) => [createdProduct, ...prev]);
   };
 
-  const updateProduct = (productId, updates) => {
+  const updateProduct = async (productId, updates) => {
+    const result = await requestUpdateProduct(productId, updates);
     setProducts((prev) =>
-      prev.map((product) => (product.id === productId ? { ...product, ...updates } : product)),
+      prev.map((product) =>
+        product.id === result.productId ? { ...product, ...result.updates } : product,
+      ),
     );
   };
 
-  const deleteProduct = (productId) => {
-    setProducts((prev) => prev.filter((product) => product.id !== productId));
-    setReservations((prev) => prev.filter((reservation) => reservation.productId !== productId));
+  const deleteProduct = async (productId) => {
+    const result = await requestDeleteProduct(productId);
+    setProducts((prev) => prev.filter((product) => product.id !== result.productId));
+    setReservations((prev) =>
+      prev.filter((reservation) => reservation.productId !== result.productId),
+    );
   };
 
-  const reserveProduct = (productId, buyer = currentUser) => {
+  const reserveProduct = async (productId, buyer = currentUser) => {
     const product = products.find((item) => item.id === productId);
 
     if (!product || !buyer) return;
 
+    const alreadyRequested = reservations.some(
+      (reservation) =>
+        reservation.productId === productId &&
+        reservation.buyerName === buyer.nickname &&
+        ["REQUESTED", "ACCEPTED"].includes(reservation.status),
+    );
+
+    if (alreadyRequested) return;
+
+    const result = await createReservation({ product, buyer });
+
     setProducts((prev) =>
       prev.map((product) =>
         product.id === productId
-          ? { ...product, status: "예약중", statusTone: "reserved" }
+          ? { ...product, ...result.productStatus }
           : product,
       ),
     );
-    setReservations((prev) => {
-      const alreadyRequested = prev.some(
-        (reservation) =>
-          reservation.productId === productId &&
-          reservation.buyerName === buyer.nickname &&
-          ["REQUESTED", "ACCEPTED"].includes(reservation.status),
-      );
-
-      if (alreadyRequested) return prev;
-
-      return [
-        {
-          id: Date.now(),
-          productId,
-          buyerName: buyer.nickname,
-          sellerName: product.seller,
-          requestedAt: "방금 전",
-          pickupTime: product.pickup.replace(" 픽업", ""),
-          status: "REQUESTED",
-        },
-        ...prev,
-      ];
-    });
+    setReservations((prev) => [result.reservation, ...prev]);
   };
 
-  const updateReservation = (reservationId, nextStatus) => {
+  const updateReservation = async (reservationId, nextStatus) => {
     const reservation = reservations.find((item) => item.id === reservationId);
-
-    setReservations((prev) =>
-      prev.map((item) => (item.id === reservationId ? { ...item, status: nextStatus } : item)),
-    );
 
     if (!reservation) return;
 
-    const productStatusByReservation = {
-      ACCEPTED: { status: "예약중", statusTone: "reserved" },
-      CANCELED: { status: "판매중", statusTone: "sale" },
-      COMPLETED: { status: "판매완료", statusTone: "soldout" },
-    };
-    const nextProductStatus = productStatusByReservation[nextStatus];
+    const result = await updateReservationStatus(reservation, nextStatus);
 
-    if (!nextProductStatus) return;
+    setReservations((prev) =>
+      prev.map((item) =>
+        item.id === result.reservationId ? { ...item, status: result.nextStatus } : item,
+      ),
+    );
+
+    if (!result.productStatus) return;
 
     setProducts((prev) =>
       prev.map((product) =>
-        product.id === reservation.productId
-          ? { ...product, ...nextProductStatus }
+        product.id === result.productId
+          ? { ...product, ...result.productStatus }
           : product,
       ),
     );
   };
 
-  const addReview = (review) => {
-    setReviews((prev) => [review, ...prev]);
+  const addReview = async (review) => {
+    const createdReview = await createReview(review);
+    setReviews((prev) => [createdReview, ...prev]);
   };
 
-  const updateReview = (reviewId, updates) => {
+  const updateReview = async (reviewId, updates) => {
+    const result = await requestUpdateReview(reviewId, updates);
     setReviews((prev) =>
-      prev.map((review) => (review.id === reviewId ? { ...review, ...updates } : review)),
-    );
-  };
-
-  const deleteReview = (reviewId) => {
-    setReviews((prev) => prev.filter((review) => review.id !== reviewId));
-  };
-
-  const markNotificationAsRead = (notificationId) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === notificationId ? { ...notification, unread: false } : notification,
+      prev.map((review) =>
+        review.id === result.reviewId ? { ...review, ...result.updates } : review,
       ),
     );
   };
 
-  const markAllNotificationsAsRead = () => {
+  const deleteReview = async (reviewId) => {
+    const result = await requestDeleteReview(reviewId);
+    setReviews((prev) => prev.filter((review) => review.id !== result.reviewId));
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    const result = await requestMarkNotificationAsRead(notificationId);
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === result.notificationId
+          ? { ...notification, unread: false }
+          : notification,
+      ),
+    );
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    await requestMarkAllNotificationsAsRead();
     setNotifications((prev) =>
       prev.map((notification) => ({ ...notification, unread: false })),
     );
   };
 
-  const deleteNotifications = (notificationIds) => {
+  const toggleNotificationEnabled = async (enabled) => {
+    const nextEnabled = await updateNotificationSetting(enabled);
+    setNotificationEnabled(nextEnabled);
+  };
+
+  const deleteNotifications = async (notificationIds) => {
+    const deletedIds = await requestDeleteNotifications(notificationIds);
     setNotifications((prev) =>
-      prev.filter((notification) => !notificationIds.includes(notification.id)),
+      prev.filter((notification) => !deletedIds.includes(notification.id)),
     );
   };
 
-  const deleteAllNotifications = () => {
+  const deleteAllNotifications = async () => {
+    await requestDeleteAllNotifications();
     setNotifications([]);
   };
 
@@ -300,7 +318,7 @@ export default function App() {
           onNavigate={navigate}
           onReadNotification={markNotificationAsRead}
           onReadAllNotifications={markAllNotificationsAsRead}
-          onToggleNotificationEnabled={setNotificationEnabled}
+          onToggleNotificationEnabled={toggleNotificationEnabled}
           onDeleteNotifications={deleteNotifications}
           onDeleteAllNotifications={deleteAllNotifications}
         />
