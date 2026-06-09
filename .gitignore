@@ -31,3 +31,30 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 환경변수 / 민감 정보 ###
+.env
+.env.local
+application-local.yml
+application-local.properties
+application-secret.yml
+application-secret.properties
+application-prod.yml
+application-prod.properties
+
+### AWS 키 파일 ###
+*.pem
+*.key
+*.p12
+*.pfx
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### 로그 ###
+*.log
+logs/
+
+### Claude Code 로컬 설정 ###
+.claude/

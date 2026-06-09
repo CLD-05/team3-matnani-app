@@ -29,6 +29,8 @@ public class ProductResponse {
     private List<String> imageUrls;
     private LocalDateTime createdAt;
     private ActiveReservationDto activeReservation;
+    private long reviewCount;
+    private double averageRating;
 
     @Getter
     public static class ActiveReservationDto {
@@ -72,5 +74,10 @@ public class ProductResponse {
 
     public void setActiveReservation(ActiveReservationDto activeReservation) {
         this.activeReservation = activeReservation;
+    }
+
+    public void setReviewStats(long reviewCount, double averageRating) {
+        this.reviewCount = reviewCount;
+        this.averageRating = averageRating;
     }
 }

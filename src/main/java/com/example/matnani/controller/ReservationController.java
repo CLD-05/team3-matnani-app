@@ -39,13 +39,22 @@ public class ReservationController {
                 reservationService.updateStatus(userId, id, request.getStatus())));
     }
 
-    // 내 예약 내역
+    // 내 예약 내역 (구매자 - 내가 예약한 것들)
     @GetMapping("/api/reservations/me")
     public ResponseEntity<ApiResponse<List<ReservationResponse>>> getMyReservations(
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = Long.parseLong(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(
                 reservationService.getReservationHistory(userId, null, "buyer")));
+    }
+
+    // 내 판매 예약 내역 (판매자 - 내 상품에 들어온 예약들)
+    @GetMapping("/api/reservations/me/seller")
+    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getMySellerReservations(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(
+                reservationService.getReservationHistory(userId, null, "seller")));
     }
 
     @Getter

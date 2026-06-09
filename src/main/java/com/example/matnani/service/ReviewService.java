@@ -17,6 +17,7 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final ReservationRepository reservationRepository;
+    private final UserRepository userRepository;
 
     // 후기 작성
     @Transactional
@@ -54,7 +55,7 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
-    // 판매자별 후기 목록
+    // 판매자별 후기 목록 (ID 기반)
     public List<ReviewResponse> getReviewsBySeller(Long sellerId) {
         return reservationRepository.findBySellerId(sellerId)
                 .stream()
@@ -63,6 +64,13 @@ public class ReviewService {
                 .map(java.util.Optional::get)
                 .map(ReviewResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    // 판매자별 후기 목록 (닉네임 기반)
+    public List<ReviewResponse> getReviewsBySellerNickname(String nickname) {
+        User seller = userRepository.findByNickname(nickname)
+                .orElseThrow(() -> new RuntimeException("판매자를 찾을 수 없습니다."));
+        return getReviewsBySeller(seller.getId());
     }
 
     // 내가 쓴 후기

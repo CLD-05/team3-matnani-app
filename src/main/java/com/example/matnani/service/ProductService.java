@@ -22,6 +22,7 @@ public class ProductService {
     private final RegionRepository regionRepository;
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
+    private final ReviewRepository reviewRepository;
 
     // 홈 피드 - 필터/정렬/페이징
     public List<ProductResponse> getProducts(Long regionId, ProductCategory category,
@@ -55,12 +56,7 @@ public class ProductService {
         products = products.subList(fromIndex, toIndex);
 
         return products.stream()
-                .map(product -> {
-                    List<String> imageUrls = productImageRepository
-                            .findByProductIdOrderBySortOrder(product.getId())
-                            .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
-                    return ProductResponse.from(product, imageUrls);
-                })
+                .map(this::buildResponse)
                 .collect(Collectors.toList());
     }
 
@@ -71,12 +67,7 @@ public class ProductService {
                 .stream()
                 .filter(p -> p.getExpiresAt() != null)
                 .sorted((a, b) -> a.getExpiresAt().compareTo(b.getExpiresAt()))
-                .map(product -> {
-                    List<String> imageUrls = productImageRepository
-                            .findByProductIdOrderBySortOrder(product.getId())
-                            .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
-                    return ProductResponse.from(product, imageUrls);
-                })
+                .map(this::buildResponse)
                 .collect(Collectors.toList());
     }
 
@@ -85,11 +76,7 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
 
-        List<String> imageUrls = productImageRepository
-                .findByProductIdOrderBySortOrder(productId)
-                .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
-
-        ProductResponse response = ProductResponse.from(product, imageUrls);
+        ProductResponse response = buildResponse(product);
 
         if (product.getStatus() == ProductStatus.RESERVED) {
             reservationRepository.findByProductIdAndStatusIn(
@@ -145,8 +132,7 @@ public class ProductService {
             }
         }
 
-        List<String> imageUrls = request.getImageUrls() != null ? request.getImageUrls() : List.of();
-        return ProductResponse.from(product, imageUrls);
+        return buildResponse(product);
     }
 
     // 상품 수정
@@ -163,24 +149,27 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
 
         product.update(request, region);
+        return buildResponse(product);
+    }
 
+    // ─── 공통 헬퍼: 이미지 + 후기 통계 포함 응답 생성 ───────────────
+    private ProductResponse buildResponse(Product product) {
         List<String> imageUrls = productImageRepository
-                .findByProductIdOrderBySortOrder(productId)
+                .findByProductIdOrderBySortOrder(product.getId())
                 .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
-
-        return ProductResponse.from(product, imageUrls);
+        ProductResponse response = ProductResponse.from(product, imageUrls);
+        response.setReviewStats(
+                reviewRepository.countByProductId(product.getId()),
+                reviewRepository.findAverageRatingByProductId(product.getId())
+        );
+        return response;
     }
 
     // 상품 검색
     public List<ProductResponse> searchProducts(String keyword) {
         return productRepository.searchByKeyword(keyword)
                 .stream()
-                .map(product -> {
-                    List<String> imageUrls = productImageRepository
-                            .findByProductIdOrderBySortOrder(product.getId())
-                            .stream().map(ProductImage::getImageUrl).collect(Collectors.toList());
-                    return ProductResponse.from(product, imageUrls);
-                })
+                .map(this::buildResponse)
                 .collect(Collectors.toList());
     }
 

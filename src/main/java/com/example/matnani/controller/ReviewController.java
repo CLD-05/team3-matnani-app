@@ -23,6 +23,30 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.success(reviewService.getAllReviews()));
     }
 
+    // 내가 쓴 후기 목록 (구매자)
+    @GetMapping("/api/reviews/me")
+    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getMyReviews(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(reviewService.getMyReviews(userId)));
+    }
+
+    // 내가 받은 후기 목록 (판매자)
+    @GetMapping("/api/reviews/me/received")
+    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getMyReceivedReviews(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(reviewService.getReviewsBySeller(userId)));
+    }
+
+    // 특정 판매자 후기 목록 (닉네임 기반 - 판매자 프로필 페이지용)
+    @GetMapping("/api/reviews/seller/{nickname}")
+    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getReviewsBySellerNickname(
+            @PathVariable String nickname) {
+        return ResponseEntity.ok(ApiResponse.success(
+                reviewService.getReviewsBySellerNickname(nickname)));
+    }
+
     // 후기 작성 (스펙: POST /api/reservations/{reservationId}/reviews)
     @PostMapping("/api/reservations/{reservationId}/reviews")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(

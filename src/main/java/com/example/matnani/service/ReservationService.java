@@ -59,11 +59,18 @@ public class ReservationService {
 
     // 예약 상태 변경
     @Transactional
-    public ReservationResponse updateStatus(Long sellerId, Long reservationId, ReservationStatus status) {
+    public ReservationResponse updateStatus(Long userId, Long reservationId, ReservationStatus status) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new RuntimeException("예약을 찾을 수 없습니다."));
 
-        if (!reservation.getSeller().getId().equals(sellerId)) {
+        boolean isSeller = reservation.getSeller().getId().equals(userId);
+        boolean isBuyer  = reservation.getBuyer().getId().equals(userId);
+
+        // 구매자는 REQUESTED 상태일 때만 취소 가능
+        if (isBuyer && status == ReservationStatus.CANCELED
+                && reservation.getStatus() == ReservationStatus.REQUESTED) {
+            // 허용 - 아래 로직으로 계속 진행
+        } else if (!isSeller) {
             throw new RuntimeException("권한이 없습니다.");
         }
 
@@ -87,9 +94,11 @@ public class ReservationService {
             product.updateStatus(ProductStatus.SOLD_OUT);
         }
 
-        // STATUS_CHANGE 알림 - product_id NULL
+        // STATUS_CHANGE 알림 - 행위자의 상대방에게 전송
+        // 구매자가 취소 → 판매자에게 알림 / 판매자가 변경 → 구매자에게 알림
+        User notifyTarget = isBuyer ? reservation.getSeller() : reservation.getBuyer();
         notificationService.createNotification(
-                reservation.getBuyer(),
+                notifyTarget,
                 NotificationType.STATUS_CHANGE,
                 null,
                 updated

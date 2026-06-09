@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Collection;
 
 @Service
 @RequiredArgsConstructor
@@ -58,5 +59,30 @@ public class NotificationService {
         notificationRepository
                 .findByUserIdAndIsRead(userId, false)
                 .forEach(Notification::markAsRead);
+    }
+
+    // 단건 삭제
+    @Transactional
+    public void deleteNotification(Long userId, Long notificationId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("알림을 찾을 수 없습니다."));
+
+        if (!notification.getUser().getId().equals(userId)) {
+            throw new RuntimeException("권한이 없습니다.");
+        }
+
+        notificationRepository.delete(notification);
+    }
+
+    // 선택 삭제
+    @Transactional
+    public void deleteNotifications(Long userId, Collection<Long> ids) {
+        ids.forEach(id -> deleteNotification(userId, id));
+    }
+
+    // 전체 삭제
+    @Transactional
+    public void deleteAllNotifications(Long userId) {
+        notificationRepository.deleteByUserId(userId);
     }
 }
