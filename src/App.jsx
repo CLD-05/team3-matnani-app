@@ -30,7 +30,6 @@ import { BusinessSignupPage } from "./pages/BusinessSignupPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MarketPage } from "./pages/MarketPage";
-import { MyReviewsPage } from "./pages/MyReviewsPage";
 import { ProductCreatePage } from "./pages/ProductCreatePage";
 import { ProductDetailPage } from "./pages/ProductDetailPage";
 import { ReservationsPage } from "./pages/ReservationsPage";
@@ -42,7 +41,6 @@ import { MyCommentsPage } from "./pages/MyCommentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { MyReviewsPage } from "./pages/MyReviewsPage";
 import { ReceivedReviewsPage } from "./pages/ReceivedReviewsPage";
-import { ReviewNewPage } from "./pages/ReviewNewPage";
 import { SellerProfilePage } from "./pages/SellerProfilePage";
 
 const authPaths = ["/login", "/signup", "/signup/business"];

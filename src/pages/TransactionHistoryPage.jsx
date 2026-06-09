@@ -48,7 +48,6 @@ const pageCopy = {
 
 export function TransactionHistoryPage({
   type,
-  initialFilter,
   currentUser,
   products,
   reservations,
