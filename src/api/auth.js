@@ -1,4 +1,4 @@
-const MOCK_ACCESS_TOKEN = "mock-access-token";
+import client from "./client";
 
 export function getSavedUser() {
   try {
@@ -11,11 +11,19 @@ export function getSavedUser() {
   }
 }
 
-export async function loginUser(user) {
-  localStorage.setItem("matnaniToken", MOCK_ACCESS_TOKEN);
-  localStorage.setItem("matnaniUser", JSON.stringify(user));
+export async function loginUser({ email, password }) {
+  const response = await client.post("/api/auth/login", { email, password });
+  const { accessToken, nickname, role } = response.data.data;
 
-  return user;
+  localStorage.setItem("matnaniToken", accessToken);
+  localStorage.setItem("matnaniUser", JSON.stringify({ email, nickname, role }));
+
+  return { email, nickname, role };
+}
+
+export async function signupUser({ email, password, nickname, phone, regionId }) {
+  await client.post("/api/auth/signup", { email, password, nickname, phone, regionId });
+  return loginUser({ email, password });
 }
 
 export async function logoutUser() {

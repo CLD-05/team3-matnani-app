@@ -1,25 +1,26 @@
 import React, { useState } from "react";
-import { TEST_ACCOUNT } from "../data/constants";
 
 export function LoginPage({ onNavigate, onLogin }) {
-  const [email, setEmail] = useState(TEST_ACCOUNT.email);
-  const [password, setPassword] = useState(TEST_ACCOUNT.password);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-
-    if (email === TEST_ACCOUNT.email && password === TEST_ACCOUNT.password) {
-      onLogin({
-        email: TEST_ACCOUNT.email,
-        nickname: TEST_ACCOUNT.nickname,
-        region: TEST_ACCOUNT.region,
-        role: "NORMAL",
-      });
+    if (!email || !password) {
+      setMessage("이메일과 비밀번호를 입력해주세요.");
       return;
     }
-
-    setMessage("테스트 계정은 user@test.com / 1234 입니다.");
+    setLoading(true);
+    setMessage("");
+    try {
+      await onLogin({ email, password });
+    } catch {
+      setMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,9 +32,6 @@ export function LoginPage({ onNavigate, onLogin }) {
           <p>동네 못난이 식품 특가와 예약 내역을 확인해보세요.</p>
         </div>
         <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="test-account-box">
-            테스트 계정: <strong>user@test.com</strong> / <strong>1234</strong>
-          </div>
           <label>
             이메일
             <input
@@ -53,8 +51,8 @@ export function LoginPage({ onNavigate, onLogin }) {
             />
           </label>
           {message && <p className="form-message">{message}</p>}
-          <button className="auth-submit" type="submit">
-            로그인
+          <button className="auth-submit" type="submit" disabled={loading}>
+            {loading ? "로그인 중..." : "로그인"}
           </button>
           <button
             className="auth-link-button"

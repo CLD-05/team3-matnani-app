@@ -3,6 +3,7 @@ import { getSavedUser, loginUser, logoutUser } from "./api/auth";
 import {
   deleteAllNotifications as requestDeleteAllNotifications,
   deleteNotifications as requestDeleteNotifications,
+  fetchMyNotifications,
   markAllNotificationsAsRead as requestMarkAllNotificationsAsRead,
   markNotificationAsRead as requestMarkNotificationAsRead,
   updateNotificationSetting,
@@ -10,19 +11,24 @@ import {
 import {
   createProduct,
   deleteProduct as requestDeleteProduct,
+  fetchProducts,
   updateProduct as requestUpdateProduct,
 } from "./api/products";
 import {
   createReservation,
+  fetchMyReservations,
+  fetchMySellerReservations,
   updateReservationStatus,
 } from "./api/reservations";
 import {
   createReview,
   deleteReview as requestDeleteReview,
+  fetchMyReviews,
   updateReview as requestUpdateReview,
 } from "./api/reviews";
 import { Header } from "./components/Header";
 import { initialProducts } from "./data/products";
+
 import { initialReservations } from "./data/reservations";
 import { initialReviews } from "./data/reviews";
 import { notifications as initialNotifications } from "./data/activity";
@@ -57,13 +63,42 @@ function isProtectedPath(path) {
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [products, setProducts] = useState(initialProducts);
-  const [reservations, setReservations] = useState(initialReservations);
-  const [reviews, setReviews] = useState(initialReviews);
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [reservations, setReservations] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [salesFilter, setSalesFilter] = useState("all");
   const [selectedRegionLabel, setSelectedRegionLabel] = useState("서울 성동구 성수동");
   const [currentUser, setCurrentUser] = useState(getSavedUser);
+
+  // 앱 시작 시 상품 목록 불러오기
+  useEffect(() => {
+    fetchProducts()
+      .then(setProducts)
+      .catch(() => {});
+  }, []);
+
+  // 로그인 상태일 때 예약 내역 + 후기 불러오기
+  useEffect(() => {
+    if (!currentUser) return;
+    Promise.all([fetchMyReservations(), fetchMySellerReservations()])
+      .then(([buyerReservations, sellerReservations]) => {
+        const seen = new Set();
+        const merged = [...buyerReservations, ...sellerReservations].filter((r) => {
+          if (seen.has(r.id)) return false;
+          seen.add(r.id);
+          return true;
+        });
+        setReservations(merged);
+      })
+      .catch(() => {});
+    fetchMyReviews()
+      .then(setReviews)
+      .catch(() => {});
+    fetchMyNotifications()
+      .then(setNotifications)
+      .catch(() => {});
+  }, [currentUser]);
 
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname);
@@ -99,6 +134,9 @@ export default function App() {
   const logout = async () => {
     await logoutUser();
     setCurrentUser(null);
+    setReservations([]);
+    setReviews([]);
+    setNotifications([]);
     navigate("/");
   };
 
@@ -317,6 +355,7 @@ export default function App() {
           notifications={notifications}
           notificationEnabled={notificationEnabled}
           onNavigate={navigate}
+          onNavigateToSales={navigateToSales}
           onReadNotification={markNotificationAsRead}
           onReadAllNotifications={markAllNotificationsAsRead}
           onToggleNotificationEnabled={toggleNotificationEnabled}
@@ -355,7 +394,6 @@ export default function App() {
         <SellerProfilePage
           sellerName={sellerProfileName}
           products={products}
-          reviews={reviews}
           onNavigate={navigate}
         />
       )}
@@ -385,6 +423,7 @@ export default function App() {
       )}
       {detailMatch && (
         <ProductDetailPage
+          productId={Number(detailMatch[1])}
           product={detailProduct}
           currentUser={currentUser}
           onNavigate={navigate}

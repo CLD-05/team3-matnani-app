@@ -8,6 +8,7 @@ export function NotificationsPage({
   notifications,
   notificationEnabled,
   onNavigate,
+  onNavigateToSales,
   onReadNotification,
   onReadAllNotifications,
   onToggleNotificationEnabled,
@@ -35,7 +36,11 @@ export function NotificationsPage({
     }
 
     onReadNotification(notification.id);
-    onNavigate(notification.targetPath);
+    if (notification.targetTab && onNavigateToSales) {
+      onNavigateToSales(notification.targetTab);
+    } else {
+      onNavigate(notification.targetPath);
+    }
   };
 
   const toggleSelectedNotification = (notificationId) => {

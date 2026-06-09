@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, PackageCheck, Star, Store, UserRound } from "lucide-react";
+import { fetchSellerReviews } from "../api/reviews";
 
 const fallbackReviewSeeds = [
   {
@@ -28,38 +29,37 @@ const fallbackReviewSeeds = [
   },
 ];
 
-export function SellerProfilePage({ sellerName, products, reviews, onNavigate }) {
+export function SellerProfilePage({ sellerName, products, onNavigate }) {
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [reviewTab, setReviewTab] = useState("all");
+  const [sellerReviews, setSellerReviews] = useState([]);
+
+  useEffect(() => {
+    if (!sellerName) return;
+    fetchSellerReviews(sellerName)
+      .then((data) =>
+        setSellerReviews(
+          data.map((review) => ({
+            id: review.id,
+            buyerName: review.buyerName,
+            buyerRegion: "맛난이 동네",
+            createdAt: review.createdAt,
+            content: review.content,
+            rating: review.rating,
+            type: "seller",
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, [sellerName]);
 
   const sellerProducts = useMemo(
     () => products.filter((product) => product.seller === sellerName),
     [products, sellerName],
   );
-  const sellerReviews = useMemo(() => {
-    const savedReviews = reviews
-      .filter((review) => review.sellerName === sellerName)
-      .map((review) => ({
-        id: review.id,
-        buyerName: review.buyerName,
-        buyerRegion: "맛난이 동네",
-        createdAt: review.createdAt,
-        content: review.content,
-        type: "seller",
-      }));
-
-    const fallbackReviews = fallbackReviewSeeds.map((review, index) => ({
-      ...review,
-      id: `fallback-${sellerName}-${index}`,
-      type: "seller",
-    }));
-
-    return savedReviews.length >= 4 ? savedReviews : [...savedReviews, ...fallbackReviews];
-  }, [reviews, sellerName]);
 
   const visibleProducts = showAllProducts ? sellerProducts : sellerProducts.slice(0, 3);
-  const visibleReviews =
-    reviewTab === "buyer" ? [] : sellerReviews;
+  const visibleReviews = reviewTab === "buyer" ? [] : sellerReviews;
 
   return (
     <section className="seller-profile-page">
@@ -81,7 +81,7 @@ export function SellerProfilePage({ sellerName, products, reviews, onNavigate })
         </div>
         <span className="seller-profile-rating">
           <Star size={15} fill="currentColor" />
-          {getAverageRating(sellerProducts)}
+          {getAverageRating(sellerReviews)}
         </span>
       </div>
 
@@ -181,11 +181,8 @@ export function SellerProfilePage({ sellerName, products, reviews, onNavigate })
   );
 }
 
-function getAverageRating(products) {
-  if (products.length === 0) return "0.0";
-
-  const rating =
-    products.reduce((sum, product) => sum + Number(product.rating || 0), 0) / products.length;
-
-  return rating.toFixed(1);
+function getAverageRating(reviews) {
+  if (reviews.length === 0) return "0.0";
+  const avg = reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / reviews.length;
+  return avg.toFixed(1);
 }

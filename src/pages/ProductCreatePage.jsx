@@ -201,6 +201,7 @@ export function ProductCreatePage({
 
     const productPayload = {
       title: form.title.trim(),
+      regionLabel: form.regionLabel,
       region: selectedRegion?.dong || "성수동",
       category: form.category,
       defectReason: form.defectReason,

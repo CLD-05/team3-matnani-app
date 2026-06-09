@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CalendarClock,
   ChevronDown,
@@ -10,6 +10,8 @@ import {
   Timer,
   UserRound,
 } from "lucide-react";
+import { fetchProduct } from "../api/products";
+import { fetchSellerReviews } from "../api/reviews";
 import { formatTimeLeft } from "../utils/time";
 
 const defectReasonLabels = {
@@ -53,18 +55,37 @@ const sampleComments = [
 ];
 
 export function ProductDetailPage({
-  product,
+  productId,
+  product: initialProduct,
   currentUser,
   onNavigate,
   onReserve,
   onDeleteProduct,
 }) {
+  const [product, setProduct] = useState(initialProduct);
+  const [sellerReviews, setSellerReviews] = useState([]);
   const [message, setMessage] = useState("");
   const [commentInput, setCommentInput] = useState("");
   const [replyInput, setReplyInput] = useState("");
   const [activeReplyCommentId, setActiveReplyCommentId] = useState(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState(sampleComments);
+
+  // URL의 ID로 항상 최신 상품 데이터를 가져옴
+  useEffect(() => {
+    if (!productId) return;
+    fetchProduct(productId)
+      .then(setProduct)
+      .catch(() => {});
+  }, [productId]);
+
+  // 판매자 전체 후기/별점 가져오기
+  useEffect(() => {
+    if (!product?.seller) return;
+    fetchSellerReviews(product.seller)
+      .then(setSellerReviews)
+      .catch(() => {});
+  }, [product?.seller]);
 
   if (!product) {
     return (
@@ -81,6 +102,13 @@ export function ProductDetailPage({
   const isReserved = product.status === "예약중";
   const isSoldOut = product.status === "판매완료";
   const isSeller = currentUser?.nickname === product.seller;
+
+  // 판매자 전체 통계 (개별 상품 후기가 아닌 판매자 누적 후기/별점)
+  const sellerReviewCount = sellerReviews.length;
+  const sellerAvgRating =
+    sellerReviewCount === 0
+      ? "0.0"
+      : (sellerReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / sellerReviewCount).toFixed(1);
   const canUseSecretComments = Boolean(currentUser);
   const currentNickname = currentUser?.nickname || "";
   const visibleComments = comments.filter(
@@ -231,11 +259,11 @@ export function ProductDetailPage({
             <UserRound size={34} />
             <div>
               <strong>{product.seller}</strong>
-              <span>{product.region} · 후기 {product.reviews}개</span>
+              <span>{product.region} · 후기 {sellerReviewCount}개</span>
             </div>
             <span className="rating">
               <Star size={15} fill="currentColor" />
-              {product.rating}
+              {sellerAvgRating}
             </span>
           </button>
 

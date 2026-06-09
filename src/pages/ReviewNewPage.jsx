@@ -61,18 +61,8 @@ export function ReviewNewPage({
   }
 
   if (alreadyReviewed) {
-    return (
-      <section className="detail-empty">
-        <h1>이미 후기를 작성한 거래입니다.</h1>
-        <button
-          className="auth-link-button"
-          type="button"
-          onClick={() => onNavigate("/mypage/reviews")}
-        >
-          내가 쓴 후기 보기
-        </button>
-      </section>
-    );
+    onNavigate("/mypage/reviews");
+    return null;
   }
 
   if (submitted) {

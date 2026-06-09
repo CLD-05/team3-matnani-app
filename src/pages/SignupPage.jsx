@@ -1,6 +1,23 @@
 import React, { useState } from "react";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
 import { regionOptions } from "../data/constants";
+import client from "../api/client";
+
+// 백엔드 지역 ID 매핑 (시/도 단위)
+const REGION_ID_MAP = {
+  "서울": 1, "부산": 2, "대구": 3, "인천": 4, "광주": 5,
+  "대전": 6, "울산": 7, "세종": 8, "경기": 9, "강원": 10,
+  "충청북": 11, "충북": 11, "충청남": 12, "충남": 12,
+  "전북": 13, "전라북": 13, "전라남": 14, "전남": 14,
+  "경상북": 15, "경북": 15, "경상남": 16, "경남": 16, "제주": 17,
+};
+
+function getRegionId(regionLabel) {
+  for (const [key, id] of Object.entries(REGION_ID_MAP)) {
+    if (regionLabel.includes(key)) return id;
+  }
+  return 1; // 기본값: 서울
+}
 
 export function SignupPage({ onNavigate, onLogin }) {
   const [form, setForm] = useState({
@@ -12,6 +29,8 @@ export function SignupPage({ onNavigate, onLogin }) {
   });
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const regionResults = regionOptions.filter((region) => {
     const keyword = regionKeyword.trim();
@@ -28,14 +47,29 @@ export function SignupPage({ onNavigate, onLogin }) {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onLogin({
-      email: form.email || "new-user@test.com",
-      nickname: form.nickname || "새 맛난이회원",
-      region: form.region,
-      role: "NORMAL",
-    });
+    if (!form.email || !form.password || !form.nickname) {
+      setMessage("이메일, 비밀번호, 닉네임은 필수입니다.");
+      return;
+    }
+    setLoading(true);
+    setMessage("");
+    try {
+      await client.post("/api/auth/signup", {
+        email: form.email,
+        password: form.password,
+        nickname: form.nickname,
+        phone: form.phone || null,
+        regionId: getRegionId(form.region),
+      });
+      await onLogin({ email: form.email, password: form.password });
+    } catch (error) {
+      const msg = error.response?.data?.message;
+      setMessage(msg || "회원가입에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -106,8 +140,9 @@ export function SignupPage({ onNavigate, onLogin }) {
               }}
             />
           )}
-          <button className="auth-submit" type="submit">
-            일반 회원가입
+          {message && <p className="form-message">{message}</p>}
+          <button className="auth-submit" type="submit" disabled={loading}>
+            {loading ? "가입 중..." : "일반 회원가입"}
           </button>
           <button
             className="auth-link-button"
