@@ -47,7 +47,6 @@ export function MyPage({ currentUser, products, onNavigate, onNavigateToSales })
         <button
           className="mypage-stat-btn"
           type="button"
-          title="예약 안 된 판매중 상품 보기"
           onClick={() => onNavigateToSales("open")}
         >
           <strong>{sellingCount}</strong>
@@ -56,8 +55,7 @@ export function MyPage({ currentUser, products, onNavigate, onNavigateToSales })
         <button
           className="mypage-stat-btn"
           type="button"
-          title="예약 내역 보기"
-          onClick={() => onNavigate("/mypage/reservations")}
+          onClick={() => onNavigateToSales("reserved")}
         >
           <strong>{reservedCount}</strong>
           <span>예약중</span>
@@ -65,7 +63,6 @@ export function MyPage({ currentUser, products, onNavigate, onNavigateToSales })
         <button
           className="mypage-stat-btn"
           type="button"
-          title="거래 완료된 상품 보기"
           onClick={() => onNavigateToSales("completed")}
         >
           <strong>{soldOutCount}</strong>
@@ -74,7 +71,6 @@ export function MyPage({ currentUser, products, onNavigate, onNavigateToSales })
         <button
           className="mypage-stat-btn"
           type="button"
-          title="내 등록 상품 전체 보기"
           onClick={() => onNavigateToSales("all")}
         >
           <strong>{myProducts.length}</strong>
@@ -106,6 +102,12 @@ export function MyPage({ currentUser, products, onNavigate, onNavigateToSales })
           title="내가 쓴 후기"
           description="거래 후 작성한 후기를 확인합니다."
           onClick={() => onNavigate("/mypage/reviews")}
+        />
+        <MyPageMenuItem
+          icon={<Star size={22} />}
+          title="내게 달린 후기"
+          description="내 판매 상품에 남겨진 후기를 확인합니다."
+          onClick={() => onNavigate("/mypage/received-reviews")}
         />
         <MyPageMenuItem
           icon={<Bell size={22} />}

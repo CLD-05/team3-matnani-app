@@ -1,13 +1,40 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Bell, ChevronDown, Leaf, MapPin, Menu, ShoppingBasket, UserRound } from "lucide-react";
+import { regionOptions } from "../data/constants";
+import { RegionSearchPanel } from "./RegionSearchPanel";
 
-export function Header({ path, currentUser, unreadNotificationCount, onNavigate, onLogout }) {
+export function Header({
+  path,
+  currentUser,
+  selectedRegionLabel,
+  unreadNotificationCount,
+  onNavigate,
+  onLogout,
+  onRegionChange,
+}) {
   const navItems = [
     { label: "홈", path: "/" },
     { label: "맛난이 장터", path: "/market" },
     { label: "상품 등록", path: "/products/new" },
   ];
+  const [regionPickerOpen, setRegionPickerOpen] = useState(false);
+  const [regionKeyword, setRegionKeyword] = useState("");
   const unreadCount = currentUser ? unreadNotificationCount : 0;
+  const currentRegion = regionOptions.find((region) => region.label === selectedRegionLabel);
+  const currentDong = currentRegion?.dong || selectedRegionLabel || currentUser?.region || "성수동";
+  const regionResults = useMemo(() => {
+    const keyword = regionKeyword.trim();
+    if (!keyword) return regionOptions;
+    return regionOptions.filter(
+      (region) => region.label.includes(keyword) || region.dong.includes(keyword),
+    );
+  }, [regionKeyword]);
+
+  const handleRegionSelect = (regionLabel) => {
+    onRegionChange(regionLabel);
+    setRegionPickerOpen(false);
+    setRegionKeyword("");
+  };
 
   return (
     <header className="site-header">
@@ -40,11 +67,34 @@ export function Header({ path, currentUser, unreadNotificationCount, onNavigate,
         ))}
       </nav>
       <div className="header-actions">
-        <button className="location-button" type="button">
-          <MapPin size={18} />
-          성수동
-          <ChevronDown size={16} />
-        </button>
+        <div className="header-location-picker">
+          <button
+            className={regionPickerOpen ? "location-button active" : "location-button"}
+            type="button"
+            aria-expanded={regionPickerOpen}
+            onClick={() => setRegionPickerOpen((prev) => !prev)}
+          >
+            <MapPin size={18} />
+            {currentDong}
+            <ChevronDown size={16} />
+          </button>
+          {regionPickerOpen && (
+            <div className="location-popover" role="dialog" aria-label="우리 동네 설정">
+              <div className="location-popover-head">
+                <strong>우리 동네 설정</strong>
+                <button type="button" onClick={() => setRegionPickerOpen(false)}>
+                  닫기
+                </button>
+              </div>
+              <RegionSearchPanel
+                keyword={regionKeyword}
+                results={regionResults}
+                onKeywordChange={setRegionKeyword}
+                onSelect={handleRegionSelect}
+              />
+            </div>
+          )}
+        </div>
         <button
           className="icon-button"
           type="button"

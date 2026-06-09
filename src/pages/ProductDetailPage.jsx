@@ -52,7 +52,13 @@ const sampleComments = [
   },
 ];
 
-export function ProductDetailPage({ product, currentUser, onNavigate, onReserve }) {
+export function ProductDetailPage({
+  product,
+  currentUser,
+  onNavigate,
+  onReserve,
+  onDeleteProduct,
+}) {
   const [message, setMessage] = useState("");
   const [commentInput, setCommentInput] = useState("");
   const [replyInput, setReplyInput] = useState("");
@@ -86,7 +92,7 @@ export function ProductDetailPage({ product, currentUser, onNavigate, onReserve 
       ? "유통기한 임박"
       : "모양 이상";
 
-  const handleReserve = () => {
+  const handleReserve = async () => {
     if (!currentUser) {
       onNavigate("/login");
       return;
@@ -96,8 +102,20 @@ export function ProductDetailPage({ product, currentUser, onNavigate, onReserve 
       return;
     }
     if (!isOnSale) return;
-    onReserve(product.id, currentUser);
+    await onReserve(product.id, currentUser);
     setMessage("예약 요청이 완료되었습니다.");
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!isOnSale) {
+      setMessage("판매중 상태인 상품만 삭제할 수 있습니다.");
+      return;
+    }
+
+    if (!window.confirm("이 상품을 삭제할까요?")) return;
+
+    await onDeleteProduct(product.id);
+    onNavigate("/market");
   };
 
   const handleCommentSubmit = (event) => {
@@ -220,6 +238,33 @@ export function ProductDetailPage({ product, currentUser, onNavigate, onReserve 
               {product.rating}
             </span>
           </button>
+
+          {isSeller && (
+            <div className="seller-management">
+              <div className="seller-management-actions">
+                <button
+                  className="reservation-ghost-button"
+                  type="button"
+                  onClick={() => onNavigate(`/products/${product.id}/edit`)}
+                >
+                  상품 수정
+                </button>
+                <button
+                  className="reservation-danger-button"
+                  type="button"
+                  disabled={!isOnSale}
+                  onClick={handleDeleteProduct}
+                >
+                  상품 삭제
+                </button>
+              </div>
+              {!isOnSale && (
+                <p className="seller-management-guide">
+                  예약중이거나 판매완료된 상품은 삭제할 수 없습니다.
+                </p>
+              )}
+            </div>
+          )}
 
           {message && <p className="form-success">{message}</p>}
 

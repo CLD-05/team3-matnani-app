@@ -1,10 +1,26 @@
 import React, { useState } from "react";
+import { RegionSearchPanel } from "../components/RegionSearchPanel";
+import { regionOptions } from "../data/constants";
 
 export function BusinessSignupPage({ onNavigate, onLogin }) {
   const [form, setForm] = useState({
     businessNumber: "",
     businessName: "",
     ownerName: "",
+    region: "서울 성동구 성수동",
+  });
+  const [regionSearchOpen, setRegionSearchOpen] = useState(false);
+  const [regionKeyword, setRegionKeyword] = useState("");
+
+  const regionResults = regionOptions.filter((region) => {
+    const keyword = regionKeyword.trim();
+    if (!keyword) return true;
+    return (
+      region.label.includes(keyword) ||
+      region.city.includes(keyword) ||
+      region.district.includes(keyword) ||
+      region.dong.includes(keyword)
+    );
   });
 
   const updateForm = (key, value) => {
@@ -16,7 +32,7 @@ export function BusinessSignupPage({ onNavigate, onLogin }) {
     onLogin({
       email: "business@test.com",
       nickname: form.businessName || "맛난이 사업자",
-      region: "성수동",
+      region: form.region,
       role: "BUSINESS",
       verifyStatus: "VERIFIED",
     });
@@ -58,6 +74,27 @@ export function BusinessSignupPage({ onNavigate, onLogin }) {
               onChange={(event) => updateForm("ownerName", event.target.value)}
             />
           </label>
+          <div className="signup-region-field">
+            <span>동네 선택</span>
+            <button
+              className="region-toggle"
+              type="button"
+              onClick={() => setRegionSearchOpen((prev) => !prev)}
+            >
+              {form.region}
+            </button>
+          </div>
+          {regionSearchOpen && (
+            <RegionSearchPanel
+              keyword={regionKeyword}
+              results={regionResults}
+              onKeywordChange={setRegionKeyword}
+              onSelect={(regionLabel) => {
+                updateForm("region", regionLabel);
+                setRegionSearchOpen(false);
+              }}
+            />
+          )}
           <button className="auth-submit" type="submit">
             사업자 회원가입
           </button>

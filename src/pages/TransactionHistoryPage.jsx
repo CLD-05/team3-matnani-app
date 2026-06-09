@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   ChevronLeft,
@@ -48,6 +48,7 @@ const pageCopy = {
 
 export function TransactionHistoryPage({
   type,
+  initialFilter,
   currentUser,
   products,
   reservations,
@@ -58,6 +59,12 @@ export function TransactionHistoryPage({
 }) {
   const copy = pageCopy[type];
   const [salesTab, setSalesTab] = useState(initialFilter || "all");
+
+  useEffect(() => {
+    if (type === "sales" && initialFilter) {
+      setSalesTab(initialFilter);
+    }
+  }, [initialFilter, type]);
 
   const transactions = useMemo(() => {
     if (type === "purchases") {

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { neighborhoods } from "../data/constants";
+import { RegionSearchPanel } from "../components/RegionSearchPanel";
+import { regionOptions } from "../data/constants";
 
 export function SignupPage({ onNavigate, onLogin }) {
   const [form, setForm] = useState({
@@ -7,7 +8,20 @@ export function SignupPage({ onNavigate, onLogin }) {
     password: "",
     nickname: "",
     phone: "",
-    region: "성수동",
+    region: "서울 성동구 성수동",
+  });
+  const [regionSearchOpen, setRegionSearchOpen] = useState(false);
+  const [regionKeyword, setRegionKeyword] = useState("");
+
+  const regionResults = regionOptions.filter((region) => {
+    const keyword = regionKeyword.trim();
+    if (!keyword) return true;
+    return (
+      region.label.includes(keyword) ||
+      region.city.includes(keyword) ||
+      region.district.includes(keyword) ||
+      region.dong.includes(keyword)
+    );
   });
 
   const updateForm = (key, value) => {
@@ -71,19 +85,27 @@ export function SignupPage({ onNavigate, onLogin }) {
               />
             </label>
           </div>
-          <label>
-            동네 선택
-            <select
-              value={form.region}
-              onChange={(event) => updateForm("region", event.target.value)}
+          <div className="signup-region-field">
+            <span>동네 선택</span>
+            <button
+              className="region-toggle"
+              type="button"
+              onClick={() => setRegionSearchOpen((prev) => !prev)}
             >
-              {neighborhoods.map((neighborhood) => (
-                <option key={neighborhood} value={neighborhood}>
-                  {neighborhood}
-                </option>
-              ))}
-            </select>
-          </label>
+              {form.region}
+            </button>
+          </div>
+          {regionSearchOpen && (
+            <RegionSearchPanel
+              keyword={regionKeyword}
+              results={regionResults}
+              onKeywordChange={setRegionKeyword}
+              onSelect={(regionLabel) => {
+                updateForm("region", regionLabel);
+                setRegionSearchOpen(false);
+              }}
+            />
+          )}
           <button className="auth-submit" type="submit">
             일반 회원가입
           </button>
