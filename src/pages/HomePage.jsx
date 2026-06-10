@@ -2,14 +2,36 @@ import React from "react";
 import { HomeSection } from "../components/HomeSection";
 import { ProductCard } from "../components/ProductCard";
 
+function getNumericValue(value) {
+  if (typeof value === "number") return value;
+  return Number(String(value || "").replace(/[^0-9.-]/g, "")) || 0;
+}
+
+function getDeadlineMinutes(product) {
+  const deadlineAt = product.pickupEndAt || product.pickupStartAt;
+
+  if (deadlineAt) {
+    const minutes = Math.round((new Date(deadlineAt).getTime() - Date.now()) / 60000);
+    return Number.isFinite(minutes) ? Math.max(0, minutes) : Number.MAX_SAFE_INTEGER;
+  }
+
+  return getNumericValue(product.deadlineInMinutes ?? product.expiresInMinutes);
+}
+
+function isOnSale(product) {
+  return product.statusTone === "sale";
+}
+
 export function HomePage({ products, onNavigate }) {
+  const onSaleProducts = products.filter(isOnSale);
   const recommendedProducts = products
-    .filter((product) => product.status === "판매중")
+    .filter(isOnSale)
     .sort((a, b) => Number(b.rating) - Number(a.rating))
     .slice(0, 4);
-  const urgentProducts = products
-    .filter((product) => product.expiresInMinutes <= 180)
-    .sort((a, b) => a.expiresInMinutes - b.expiresInMinutes);
+  const urgentProducts = onSaleProducts
+    .filter((product) => getDeadlineMinutes(product) > 0)
+    .sort((a, b) => getDeadlineMinutes(a) - getDeadlineMinutes(b))
+    .slice(0, 4);
   const previewProducts = products.slice(0, 4);
 
   return (

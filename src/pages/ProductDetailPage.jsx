@@ -21,38 +21,27 @@ const defectReasonLabels = {
   ETC: "기타",
 };
 
-const sampleComments = [
-  {
-    id: 1,
-    writer: "맛난이회원",
-    writerId: "맛난이회원",
-    content: "오늘 저녁 7시에 픽업 가능할까요?",
-    createdAt: "방금 전",
-    replies: [
-      {
-        id: 101,
-        writer: "판매자",
-        content: "네, 7시 픽업 가능합니다. 예약 후 방문해주세요.",
-        createdAt: "1분 전",
-      },
-    ],
-  },
-  {
-    id: 2,
-    writer: "문의한사람2",
-    writerId: "문의한사람2",
-    content: "당근 크기가 많이 작은 편인가요?",
-    createdAt: "5분 전",
-    replies: [
-      {
-        id: 102,
-        writer: "판매자",
-        content: "일반 상품보다 조금 작지만 조리용으로 쓰기 좋습니다.",
-        createdAt: "3분 전",
-      },
-    ],
-  },
-];
+const legacySampleCommentIds = new Set([1, 2]);
+
+function getCommentsStorageKey(productId) {
+  return `matnaniComments:${productId}`;
+}
+
+function loadSavedComments(productId) {
+  try {
+    const savedComments = localStorage.getItem(getCommentsStorageKey(productId));
+    const parsedComments = savedComments ? JSON.parse(savedComments) : [];
+    if (!Array.isArray(parsedComments)) return [];
+    return parsedComments.filter((comment) => !legacySampleCommentIds.has(comment.id));
+  } catch {
+    return [];
+  }
+}
+
+function formatDiscount(discount) {
+  const numericDiscount = Number(String(discount ?? 0).replace(/[^0-9.-]/g, ""));
+  return `${Number.isFinite(numericDiscount) ? numericDiscount : 0}%`;
+}
 
 export function ProductDetailPage({
   productId,
@@ -69,22 +58,31 @@ export function ProductDetailPage({
   const [replyInput, setReplyInput] = useState("");
   const [activeReplyCommentId, setActiveReplyCommentId] = useState(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState(sampleComments);
+  const [comments, setComments] = useState(() => loadSavedComments(productId));
 
   // URL의 ID로 항상 최신 상품 데이터를 가져옴
   useEffect(() => {
     if (!productId) return;
     fetchProduct(productId)
       .then(setProduct)
-      .catch(() => {});
+      .catch(() => { });
   }, [productId]);
+
+  useEffect(() => {
+    setComments(loadSavedComments(productId));
+  }, [productId]);
+
+  useEffect(() => {
+    if (!productId) return;
+    localStorage.setItem(getCommentsStorageKey(productId), JSON.stringify(comments));
+  }, [comments, productId]);
 
   // 판매자 전체 후기/별점 가져오기
   useEffect(() => {
     if (!product?.seller) return;
     fetchSellerReviews(product.seller)
       .then(setSellerReviews)
-      .catch(() => {});
+      .catch(() => { });
   }, [product?.seller]);
 
   if (!product) {
@@ -98,9 +96,9 @@ export function ProductDetailPage({
     );
   }
 
-  const isOnSale = product.status === "판매중";
-  const isReserved = product.status === "예약중";
-  const isSoldOut = product.status === "판매완료";
+  const isOnSale = product.statusTone === "sale" || product.status === "판매중";
+  const isReserved = product.statusTone === "reserved" || product.status === "예약중";
+  const isSoldOut = product.statusTone === "soldout" || product.status === "판매완료";
   const isSeller = currentUser?.nickname === product.seller;
 
   // 판매자 전체 통계 (개별 상품 후기가 아닌 판매자 누적 후기/별점)
@@ -130,8 +128,15 @@ export function ProductDetailPage({
       return;
     }
     if (!isOnSale) return;
-    await onReserve(product.id, currentUser);
-    setMessage("예약 요청이 완료되었습니다.");
+    try {
+      const result = await onReserve(product.id, currentUser);
+      if (result?.productStatus) {
+        setProduct((prev) => ({ ...prev, ...result.productStatus }));
+      }
+      setMessage("예약 요청이 완료되었습니다.");
+    } catch (error) {
+      setMessage("예약 요청에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   const handleDeleteProduct = async () => {
@@ -175,17 +180,17 @@ export function ProductDetailPage({
       prev.map((comment) =>
         comment.id === commentId
           ? {
-              ...comment,
-              replies: [
-                ...comment.replies,
-                {
-                  id: Date.now(),
-                  writer: isSeller ? "판매자" : currentNickname,
-                  content: replyInput.trim(),
-                  createdAt: "방금 전",
-                },
-              ],
-            }
+            ...comment,
+            replies: [
+              ...comment.replies,
+              {
+                id: Date.now(),
+                writer: isSeller ? "판매자" : currentNickname,
+                content: replyInput.trim(),
+                createdAt: "방금 전",
+              },
+            ],
+          }
           : comment,
       ),
     );
@@ -227,7 +232,7 @@ export function ProductDetailPage({
           <div className="detail-price-box">
             <span className="original">{product.originalPrice}</span>
             <div>
-              <span className="discount">{product.discount}%</span>
+              <span className="discount">{formatDiscount(product.discount)}</span>
               <strong>{product.price}</strong>
             </div>
           </div>
@@ -410,23 +415,23 @@ export function ProductDetailPage({
                         </div>
                         {(isSeller || comment.writerId === currentNickname) &&
                           activeReplyCommentId === comment.id && (
-                          <form
-                            className="reply-form"
-                            onSubmit={(event) => handleReplySubmit(event, comment.id)}
-                          >
-                            <input
-                              type="text"
-                              placeholder={
-                                isSeller
-                                  ? `${comment.writer}님에게 답글을 남겨보세요.`
-                                  : "내 문의에 추가 내용을 남겨보세요."
-                              }
-                              value={replyInput}
-                              onChange={(event) => setReplyInput(event.target.value)}
-                            />
-                            <button type="submit">등록</button>
-                          </form>
-                        )}
+                            <form
+                              className="reply-form"
+                              onSubmit={(event) => handleReplySubmit(event, comment.id)}
+                            >
+                              <input
+                                type="text"
+                                placeholder={
+                                  isSeller
+                                    ? `${comment.writer}님에게 답글을 남겨보세요.`
+                                    : "내 문의에 추가 내용을 남겨보세요."
+                                }
+                                value={replyInput}
+                                onChange={(event) => setReplyInput(event.target.value)}
+                              />
+                              <button type="submit">등록</button>
+                            </form>
+                          )}
                         {comment.replies.map((reply) => (
                           <div className="comment-reply" key={reply.id}>
                             <div>

@@ -21,7 +21,9 @@ export function ReservationsPage({
     () =>
       reservations.map((reservation) => ({
         ...reservation,
-        product: products.find((product) => product.id === reservation.productId),
+        product:
+          products.find((product) => String(product.id) === String(reservation.productId)) ||
+          reservation.product,
       })),
     [products, reservations],
   );
@@ -103,7 +105,7 @@ function ReservationCard({ reservation, onNavigate, onUpdateReservation }) {
         <div className="reservation-title-row">
           <div>
             <p className="seller">{reservation.sellerName} 판매</p>
-            <h2>{product?.title || "삭제된 상품"}</h2>
+            <h2>{product?.title || reservation.productTitle || "삭제된 상품"}</h2>
           </div>
           <span className={`reservation-status ${status.tone}`}>{status.label}</span>
         </div>
@@ -111,7 +113,7 @@ function ReservationCard({ reservation, onNavigate, onUpdateReservation }) {
         <div className="reservation-meta">
           <span>
             <MapPin size={16} />
-            {product?.region || "지역 정보 없음"}
+            {product?.region || product?.regionName || "지역 정보 없음"}
           </span>
           <span>
             <Clock3 size={16} />

@@ -1,39 +1,3 @@
-export const myComments = [
-  {
-    id: 1,
-    productId: 1,
-    productTitle: "못난이 당근 1kg",
-    writerName: "맛난이회원",
-    sellerName: "성수 채소농장",
-    content: "오늘 저녁 7시에 픽업 가능할까요?",
-    lastReply: "네, 7시 픽업 가능합니다. 예약 후 방문해주세요.",
-    createdAt: "오늘 13:20",
-    status: "답글 완료",
-  },
-  {
-    id: 2,
-    productId: 3,
-    productTitle: "흠집 사과 5kg",
-    writerName: "맛난이회원",
-    sellerName: "망원 과일상회",
-    content: "상처 난 부분이 많이 깊은 편인가요?",
-    lastReply: "겉면 흠집 위주라 손질해서 드시기 좋습니다.",
-    createdAt: "어제 18:42",
-    status: "답글 완료",
-  },
-  {
-    id: 3,
-    productId: 10,
-    productTitle: "성수 못난이 양파 3kg",
-    writerName: "성수직장인",
-    sellerName: "맛난이회원",
-    content: "오늘 18시 30분보다 조금 늦어도 괜찮을까요?",
-    lastReply: "",
-    createdAt: "오늘 12:18",
-    status: "답글 대기",
-  },
-];
-
 export const notifications = [
   {
     id: 1,

@@ -3,6 +3,12 @@ import { ImagePlus, Upload } from "lucide-react";
 import { categories, regionOptions } from "../data/constants";
 import { PageIntro } from "../components/PageIntro";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
+import {
+  DEFAULT_REGION_LABEL,
+  filterRegions,
+  getRegionDong,
+  normalizeRegionLabel,
+} from "../utils/regions";
 
 function toDateTimeLocal(date) {
   const pad = (value) => String(value).padStart(2, "0");
@@ -13,22 +19,21 @@ function toDateTimeLocal(date) {
   ].join("-") + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function createInitialForm() {
+function createInitialForm(regionLabel = DEFAULT_REGION_LABEL) {
   const now = new Date();
   const pickupStart = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   const pickupEnd = new Date(now.getTime() + 5 * 60 * 60 * 1000);
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
   return {
-    title: "못난이 당근 1kg",
+    title: "",
     category: "농수산물",
     defectReason: "SHAPE_BAD",
-    description:
-      "모양은 조금 휘었지만 신선한 당근입니다. 오늘 수확했고 흙만 가볍게 털어 포장해둘게요.",
-    originalPrice: "5000",
-    discountPrice: "3000",
-    regionLabel: "서울 성동구 성수동",
-    pickupPlace: "성수동 주민센터 앞",
+    description: "",
+    originalPrice: "",
+    discountPrice: "",
+    regionLabel: normalizeRegionLabel(regionLabel),
+    pickupPlace: "",
     pickupStartAt: toDateTimeLocal(pickupStart),
     pickupEndAt: toDateTimeLocal(pickupEnd),
     expiresAt: toDateTimeLocal(expiresAt),
@@ -40,10 +45,11 @@ function getNumericPrice(value) {
   return Number(String(value || "").replace(/[^0-9]/g, ""));
 }
 
-function createEditForm(product) {
-  const fallback = createInitialForm();
+function createEditForm(product, regionLabel = DEFAULT_REGION_LABEL) {
+  const fallback = createInitialForm(regionLabel);
+  const productRegionValue = product?.regionLabel || product?.regionName || product?.region;
   const matchedRegion = regionOptions.find(
-    (region) => region.dong === product?.region || region.label === product?.region,
+    (region) => region.dong === productRegionValue || region.label === productRegionValue,
   );
 
   return {
@@ -54,7 +60,7 @@ function createEditForm(product) {
     description: product?.description || fallback.description,
     originalPrice: String(product?.originalPriceValue || getNumericPrice(product?.originalPrice) || ""),
     discountPrice: String(product?.priceValue || getNumericPrice(product?.price) || ""),
-    regionLabel: matchedRegion?.label || product?.region || fallback.regionLabel,
+    regionLabel: normalizeRegionLabel(matchedRegion?.label || productRegionValue || fallback.regionLabel),
     pickupPlace: product?.pickupPlace || fallback.pickupPlace,
     pickupStartAt: product?.pickupStartAt || fallback.pickupStartAt,
     pickupEndAt: product?.pickupEndAt || fallback.pickupEndAt,
@@ -104,29 +110,52 @@ function latestDateTimeLocal(...values) {
 
 export function ProductCreatePage({
   currentUser,
+  selectedRegionLabel,
   productToEdit,
   onAddProduct,
   onUpdateProduct,
   onNavigate,
 }) {
   const isEditMode = Boolean(productToEdit);
+  const defaultRegionLabel = normalizeRegionLabel(
+    productToEdit?.regionLabel ||
+    productToEdit?.regionName ||
+    productToEdit?.region ||
+    selectedRegionLabel ||
+    currentUser?.region,
+  );
   const [form, setForm] = useState(() =>
-    productToEdit ? createEditForm(productToEdit) : createInitialForm(),
+    productToEdit ? createEditForm(productToEdit, defaultRegionLabel) : createInitialForm(defaultRegionLabel),
   );
   const [message, setMessage] = useState("");
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
+  const [imagePreviews, setImagePreviews] = useState(() => productToEdit?.image ? [productToEdit.image] : []);
 
   useEffect(() => {
-    setForm(productToEdit ? createEditForm(productToEdit) : createInitialForm());
+    setForm(productToEdit ? createEditForm(productToEdit, defaultRegionLabel) : createInitialForm(defaultRegionLabel));
+    setImagePreviews(productToEdit?.image ? [productToEdit.image] : []);
     setMessage("");
-  }, [productToEdit]);
+  }, [defaultRegionLabel, productToEdit]);
 
-  const regionResults = regionOptions.filter((region) => {
-    const keyword = regionKeyword.trim();
-    if (!keyword) return true;
-    return region.label.includes(keyword) || region.dong.includes(keyword);
-  });
+  const regionResults = filterRegions(regionKeyword);
+
+  const handleImageChange = (event) => {
+    const files = Array.from(event.target.files || []).slice(0, 5);
+
+    if (files.length === 0) return;
+
+    Promise.all(
+      files.map(
+        (file) =>
+          new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+          }),
+      ),
+    ).then((previews) => setImagePreviews(previews.filter(Boolean)));
+  };
 
   const updateForm = (key, value) => {
     setForm((prev) => {
@@ -163,12 +192,23 @@ export function ProductCreatePage({
     Math.round(
       ((Number(form.originalPrice) - Number(form.discountPrice)) /
         Number(form.originalPrice)) *
-        100,
+      100,
     ) || 0,
   );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (
+      !form.title.trim() ||
+      !form.description.trim() ||
+      !form.pickupPlace.trim() ||
+      !form.originalPrice ||
+      !form.discountPrice
+    ) {
+      setMessage("상품명, 설명, 가격, 픽업 장소를 모두 입력해주세요.");
+      return;
+    }
+
     if (Number(form.discountPrice) >= Number(form.originalPrice)) {
       setMessage("할인가는 원가보다 낮아야 합니다.");
       return;
@@ -193,7 +233,7 @@ export function ProductCreatePage({
       return;
     }
 
-    const selectedRegion = regionOptions.find((region) => region.label === form.regionLabel);
+    const normalizedRegionLabel = normalizeRegionLabel(form.regionLabel);
     const pickupLabel = formatDateTimeLabel(form.pickupStartAt);
     const pickupEndLabel = formatDateTimeLabel(form.pickupEndAt);
     const shouldKeepOriginalPickup = isEditMode && !productToEdit?.pickupStartAt;
@@ -201,8 +241,8 @@ export function ProductCreatePage({
 
     const productPayload = {
       title: form.title.trim(),
-      regionLabel: form.regionLabel,
-      region: selectedRegion?.dong || "성수동",
+      regionLabel: normalizedRegionLabel,
+      region: getRegionDong(normalizedRegionLabel),
       category: form.category,
       defectReason: form.defectReason,
       description: form.description.trim(),
@@ -224,28 +264,39 @@ export function ProductCreatePage({
       expiresInMinutes: shouldKeepOriginalExpiration
         ? productToEdit.expiresInMinutes
         : getMinutesUntil(form.expiresAt),
+      deadlineInMinutes: getMinutesUntil(form.pickupEndAt || form.pickupStartAt),
+      image: imagePreviews[0],
+      imageUrls: imagePreviews,
     };
 
-    if (isEditMode) {
-      await onUpdateProduct(productToEdit.id, productPayload);
-      setMessage("상품 정보가 수정되었습니다.");
-      onNavigate?.(`/products/${productToEdit.id}`);
-      return;
-    }
+    try {
+      if (isEditMode) {
+        await onUpdateProduct(productToEdit.id, productPayload);
+        setMessage("상품 정보가 수정되었습니다.");
+        onNavigate?.(`/products/${productToEdit.id}`);
+        return;
+      }
 
-    await onAddProduct({
-      id: Date.now(),
-      ...productPayload,
-      seller: currentUser?.nickname || "맛난이회원",
-      status: "판매중",
-      statusTone: "sale",
-      rating: "0.0",
-      reviews: 0,
-      createdMinutes: 0,
-      image:
-        "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&w=900&q=80",
-    });
-    setMessage("상품이 등록되었습니다.");
+      await onAddProduct({
+        id: Date.now(),
+        ...productPayload,
+        seller: currentUser?.nickname || "맛난이회원",
+        status: "판매중",
+        statusTone: "sale",
+        rating: "0.0",
+        reviews: 0,
+        createdMinutes: 0,
+        image:
+          imagePreviews[0] ||
+          "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&w=900&q=80",
+        imageUrls: imagePreviews,
+      });
+      setMessage("상품이 등록되었습니다.");
+      window.alert("상품 등록이 완료되었습니다.");
+      onNavigate?.("/");
+    } catch (error) {
+      setMessage("상품 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   return (
@@ -262,14 +313,42 @@ export function ProductCreatePage({
       <section className="create-layout">
         <div className="upload-panel">
           <div className="upload-box">
-            <ImagePlus size={42} />
-            <strong>상품 이미지</strong>
-            <span>최대 5장까지 등록</span>
+            {imagePreviews[0] ? (
+              <img className="upload-preview-main" src={imagePreviews[0]} alt="선택한 상품 이미지" />
+            ) : (
+              <>
+                <ImagePlus size={42} />
+                <strong>상품 이미지</strong>
+                <span>최대 5장까지 등록</span>
+              </>
+            )}
           </div>
-          <button className="auth-link-button" type="button">
+          {imagePreviews.length > 1 && (
+            <div className="upload-preview-list" aria-label="선택한 이미지 미리보기">
+              {imagePreviews.map((preview, index) => (
+                <img key={preview} src={preview} alt={`선택한 상품 이미지 ${index + 1}`} />
+              ))}
+            </div>
+          )}
+          <label className="auth-link-button upload-select-button">
             <Upload size={17} />
             이미지 선택
-          </button>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
+            />
+          </label>
+          {imagePreviews.length > 0 && (
+            <button
+              className="auth-link-button"
+              type="button"
+              onClick={() => setImagePreviews([])}
+            >
+              이미지 제거
+            </button>
+          )}
         </div>
 
         <form className="create-form" onSubmit={handleSubmit}>
@@ -359,7 +438,7 @@ export function ProductCreatePage({
               results={regionResults}
               onKeywordChange={setRegionKeyword}
               onSelect={(regionLabel) => {
-                updateForm("regionLabel", regionLabel);
+                updateForm("regionLabel", normalizeRegionLabel(regionLabel));
                 setRegionSearchOpen(false);
               }}
             />

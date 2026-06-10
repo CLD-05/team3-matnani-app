@@ -1,23 +1,12 @@
 import React, { useState } from "react";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
-import { regionOptions } from "../data/constants";
 import client from "../api/client";
-
-// 백엔드 지역 ID 매핑 (시/도 단위)
-const REGION_ID_MAP = {
-  "서울": 1, "부산": 2, "대구": 3, "인천": 4, "광주": 5,
-  "대전": 6, "울산": 7, "세종": 8, "경기": 9, "강원": 10,
-  "충청북": 11, "충북": 11, "충청남": 12, "충남": 12,
-  "전북": 13, "전라북": 13, "전라남": 14, "전남": 14,
-  "경상북": 15, "경북": 15, "경상남": 16, "경남": 16, "제주": 17,
-};
-
-function getRegionId(regionLabel) {
-  for (const [key, id] of Object.entries(REGION_ID_MAP)) {
-    if (regionLabel.includes(key)) return id;
-  }
-  return 1; // 기본값: 서울
-}
+import {
+  DEFAULT_REGION_LABEL,
+  filterRegions,
+  getRegionId,
+  normalizeRegionLabel,
+} from "../utils/regions";
 
 export function SignupPage({ onNavigate, onLogin }) {
   const [form, setForm] = useState({
@@ -25,23 +14,14 @@ export function SignupPage({ onNavigate, onLogin }) {
     password: "",
     nickname: "",
     phone: "",
-    region: "서울 성동구 성수동",
+    region: DEFAULT_REGION_LABEL,
   });
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const regionResults = regionOptions.filter((region) => {
-    const keyword = regionKeyword.trim();
-    if (!keyword) return true;
-    return (
-      region.label.includes(keyword) ||
-      region.city.includes(keyword) ||
-      region.district.includes(keyword) ||
-      region.dong.includes(keyword)
-    );
-  });
+  const regionResults = filterRegions(regionKeyword);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -63,7 +43,11 @@ export function SignupPage({ onNavigate, onLogin }) {
         phone: form.phone || null,
         regionId: getRegionId(form.region),
       });
-      await onLogin({ email: form.email, password: form.password });
+      await onLogin({
+        email: form.email,
+        password: form.password,
+        region: normalizeRegionLabel(form.region),
+      });
     } catch (error) {
       const msg = error.response?.data?.message;
       setMessage(msg || "회원가입에 실패했습니다. 다시 시도해주세요.");
@@ -135,7 +119,7 @@ export function SignupPage({ onNavigate, onLogin }) {
               results={regionResults}
               onKeywordChange={setRegionKeyword}
               onSelect={(regionLabel) => {
-                updateForm("region", regionLabel);
+                updateForm("region", normalizeRegionLabel(regionLabel));
                 setRegionSearchOpen(false);
               }}
             />

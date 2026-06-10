@@ -2,7 +2,25 @@ import React from "react";
 import { CalendarClock, MapPin, Star, Timer } from "lucide-react";
 import { formatTimeLeft } from "../utils/time";
 
+function getDeadlineMinutes(product) {
+  const deadlineAt = product.pickupEndAt || product.pickupStartAt;
+
+  if (deadlineAt) {
+    const minutes = Math.round((new Date(deadlineAt).getTime() - Date.now()) / 60000);
+    return Number.isFinite(minutes) ? Math.max(0, minutes) : 0;
+  }
+
+  return product.deadlineInMinutes ?? product.expiresInMinutes ?? 0;
+}
+
+function formatDiscount(discount) {
+  const numericDiscount = Number(String(discount ?? 0).replace(/[^0-9.-]/g, ""));
+  return `${Number.isFinite(numericDiscount) ? numericDiscount : 0}%`;
+}
+
 export function ProductCard({ product, compact = false, onClick }) {
+  const deadlineMinutes = getDeadlineMinutes(product);
+
   return (
     <article
       className={`product-card ${compact ? "compact-card" : ""}`}
@@ -31,7 +49,7 @@ export function ProductCard({ product, compact = false, onClick }) {
           {product.pickup}
         </div>
         <div className="price-row">
-          <span className="discount">{product.discount}%</span>
+          <span className="discount">{formatDiscount(product.discount)}</span>
           <span className="original">{product.originalPrice}</span>
         </div>
         <strong className="price">{product.price}</strong>
@@ -42,7 +60,7 @@ export function ProductCard({ product, compact = false, onClick }) {
           </span>
           <span className="deadline">
             <Timer size={15} />
-            {formatTimeLeft(product.expiresInMinutes)}
+            {formatTimeLeft(deadlineMinutes)}
           </span>
         </div>
       </div>

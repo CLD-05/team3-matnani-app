@@ -48,6 +48,7 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { MyReviewsPage } from "./pages/MyReviewsPage";
 import { ReceivedReviewsPage } from "./pages/ReceivedReviewsPage";
 import { SellerProfilePage } from "./pages/SellerProfilePage";
+import { DEFAULT_REGION_LABEL, normalizeRegionLabel } from "./utils/regions";
 
 const authPaths = ["/login", "/signup", "/signup/business"];
 
@@ -66,16 +67,21 @@ export default function App() {
   const [reservations, setReservations] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [appMessage, setAppMessage] = useState("");
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [salesFilter, setSalesFilter] = useState("all");
-  const [selectedRegionLabel, setSelectedRegionLabel] = useState("서울 성동구 성수동");
   const [currentUser, setCurrentUser] = useState(getSavedUser);
+  const [selectedRegionLabel, setSelectedRegionLabel] = useState(() =>
+    normalizeRegionLabel(getSavedUser()?.region || DEFAULT_REGION_LABEL),
+  );
 
   // 앱 시작 시 상품 목록 불러오기
   useEffect(() => {
     fetchProducts()
       .then(setProducts)
-      .catch(() => {});
+      .catch(() => {
+        setAppMessage("상품 목록을 불러오지 못해 기본 데이터로 표시합니다.");
+      });
   }, []);
 
   // 로그인 상태일 때 예약 내역 + 후기 불러오기
@@ -91,13 +97,19 @@ export default function App() {
         });
         setReservations(merged);
       })
-      .catch(() => {});
+      .catch(() => {
+        setAppMessage("예약 내역을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      });
     fetchMyReviews()
       .then(setReviews)
-      .catch(() => {});
+      .catch(() => {
+        setAppMessage("후기 내역을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      });
     fetchMyNotifications()
       .then(setNotifications)
-      .catch(() => {});
+      .catch(() => {
+        setAppMessage("알림 내역을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      });
   }, [currentUser]);
 
   useEffect(() => {
@@ -128,6 +140,9 @@ export default function App() {
   const login = async (user) => {
     const loggedInUser = await loginUser(user);
     setCurrentUser(loggedInUser);
+    if (loggedInUser.region || user.region) {
+      setSelectedRegionLabel(normalizeRegionLabel(loggedInUser.region || user.region));
+    }
     navigate("/");
   };
 
@@ -143,13 +158,17 @@ export default function App() {
   const addProduct = async (product) => {
     const createdProduct = await createProduct(product);
     setProducts((prev) => [createdProduct, ...prev]);
+    return createdProduct;
   };
 
   const updateProduct = async (productId, updates) => {
     const result = await requestUpdateProduct(productId, updates);
+    const nextUpdates = Object.fromEntries(
+      Object.entries(result.updates).filter(([, value]) => value !== undefined),
+    );
     setProducts((prev) =>
       prev.map((product) =>
-        product.id === result.productId ? { ...product, ...result.updates } : product,
+        product.id === result.productId ? { ...product, ...nextUpdates } : product,
       ),
     );
   };
@@ -186,30 +205,56 @@ export default function App() {
       ),
     );
     setReservations((prev) => [result.reservation, ...prev]);
+    return result;
   };
 
   const updateReservation = async (reservationId, nextStatus) => {
-    const reservation = reservations.find((item) => item.id === reservationId);
+    try {
+      const reservation = reservations.find((item) => String(item.id) === String(reservationId));
 
-    if (!reservation) return;
+      if (!reservation) return;
 
-    const result = await updateReservationStatus(reservation, nextStatus);
+      const reservationProduct =
+        reservation.product ||
+        products.find((product) => String(product.id) === String(reservation.productId));
+      const result = await updateReservationStatus(reservation, nextStatus);
+      const productId = result.productId || reservation.productId || reservationProduct?.id;
 
-    setReservations((prev) =>
-      prev.map((item) =>
-        item.id === result.reservationId ? { ...item, status: result.nextStatus } : item,
-      ),
-    );
+      setReservations((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(result.reservationId)
+            ? {
+              ...item,
+              ...result.reservation,
+              productId,
+              product: result.reservation?.product || item.product || reservationProduct,
+              productTitle:
+                result.reservation?.productTitle ||
+                item.productTitle ||
+                reservationProduct?.title,
+              status: result.nextStatus,
+            }
+            : item,
+        ),
+      );
 
-    if (!result.productStatus) return;
+      if (!result.productStatus) return;
 
-    setProducts((prev) =>
-      prev.map((product) =>
-        product.id === result.productId
-          ? { ...product, ...result.productStatus }
-          : product,
-      ),
-    );
+      setProducts((prev) => {
+        const hasProduct = prev.some((product) => String(product.id) === String(productId));
+        const updatedProducts = prev.map((product) =>
+          String(product.id) === String(productId)
+            ? { ...product, ...result.productStatus }
+            : product,
+        );
+
+        if (hasProduct || !reservationProduct) return updatedProducts;
+
+        return [{ ...reservationProduct, ...result.productStatus }, ...updatedProducts];
+      });
+    } catch {
+      setAppMessage("예약 상태 변경에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   const addReview = async (review) => {
@@ -295,6 +340,14 @@ export default function App() {
         onLogout={logout}
         onRegionChange={setSelectedRegionLabel}
       />
+      {appMessage && (
+        <div className="app-message" role="status" aria-live="polite">
+          <span>{appMessage}</span>
+          <button type="button" onClick={() => setAppMessage("")}>
+            닫기
+          </button>
+        </div>
+      )}
       {path === "/login" && <LoginPage onNavigate={navigate} onLogin={login} />}
       {path === "/signup" && <SignupPage onNavigate={navigate} onLogin={login} />}
       {path === "/signup/business" && (
@@ -303,6 +356,7 @@ export default function App() {
       {path === "/market" && (
         <MarketPage
           products={products}
+          currentUser={currentUser}
           selectedRegionLabel={selectedRegionLabel}
           onNavigate={navigate}
         />
@@ -311,6 +365,7 @@ export default function App() {
         <MyPage
           currentUser={currentUser}
           products={products}
+          reservations={reservations}
           onNavigate={navigate}
           onNavigateToSales={navigateToSales}
         />
@@ -341,13 +396,12 @@ export default function App() {
           currentUser={currentUser}
           products={products}
           reservations={reservations}
-          initialFilter={salesFilter}
           onNavigate={navigate}
           onUpdateReservation={updateReservation}
         />
       )}
       {path === "/mypage/comments" && (
-        <MyCommentsPage currentUser={currentUser} onNavigate={navigate} />
+        <MyCommentsPage currentUser={currentUser} products={products} onNavigate={navigate} />
       )}
       {path === "/mypage/notifications" && (
         <NotificationsPage
@@ -400,6 +454,7 @@ export default function App() {
       {path === "/products/new" && (
         <ProductCreatePage
           currentUser={currentUser}
+          selectedRegionLabel={selectedRegionLabel}
           onAddProduct={addProduct}
           onNavigate={navigate}
         />
@@ -407,6 +462,7 @@ export default function App() {
       {editProductMatch && canEditProduct && (
         <ProductCreatePage
           currentUser={currentUser}
+          selectedRegionLabel={selectedRegionLabel}
           productToEdit={editProduct}
           onAddProduct={addProduct}
           onUpdateProduct={updateProduct}

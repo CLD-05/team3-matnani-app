@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Bell, ChevronDown, Leaf, MapPin, Menu, ShoppingBasket, UserRound } from "lucide-react";
-import { regionOptions } from "../data/constants";
 import { RegionSearchPanel } from "./RegionSearchPanel";
+import { filterRegions, getRegionDong, normalizeRegionLabel } from "../utils/regions";
 
 export function Header({
   path,
@@ -20,18 +20,12 @@ export function Header({
   const [regionPickerOpen, setRegionPickerOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
   const unreadCount = currentUser ? unreadNotificationCount : 0;
-  const currentRegion = regionOptions.find((region) => region.label === selectedRegionLabel);
-  const currentDong = currentRegion?.dong || selectedRegionLabel || currentUser?.region || "성수동";
-  const regionResults = useMemo(() => {
-    const keyword = regionKeyword.trim();
-    if (!keyword) return regionOptions;
-    return regionOptions.filter(
-      (region) => region.label.includes(keyword) || region.dong.includes(keyword),
-    );
-  }, [regionKeyword]);
+  const currentRegionLabel = normalizeRegionLabel(selectedRegionLabel || currentUser?.region);
+  const currentDong = getRegionDong(currentRegionLabel);
+  const regionResults = useMemo(() => filterRegions(regionKeyword), [regionKeyword]);
 
   const handleRegionSelect = (regionLabel) => {
-    onRegionChange(regionLabel);
+    onRegionChange(normalizeRegionLabel(regionLabel));
     setRegionPickerOpen(false);
     setRegionKeyword("");
   };

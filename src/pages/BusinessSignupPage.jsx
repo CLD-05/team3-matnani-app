@@ -1,27 +1,22 @@
 import React, { useState } from "react";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
-import { regionOptions } from "../data/constants";
+import {
+  DEFAULT_REGION_LABEL,
+  filterRegions,
+  normalizeRegionLabel,
+} from "../utils/regions";
 
 export function BusinessSignupPage({ onNavigate, onLogin }) {
   const [form, setForm] = useState({
     businessNumber: "",
     businessName: "",
     ownerName: "",
-    region: "서울 성동구 성수동",
+    region: DEFAULT_REGION_LABEL,
   });
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
 
-  const regionResults = regionOptions.filter((region) => {
-    const keyword = regionKeyword.trim();
-    if (!keyword) return true;
-    return (
-      region.label.includes(keyword) ||
-      region.city.includes(keyword) ||
-      region.district.includes(keyword) ||
-      region.dong.includes(keyword)
-    );
-  });
+  const regionResults = filterRegions(regionKeyword);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -32,7 +27,7 @@ export function BusinessSignupPage({ onNavigate, onLogin }) {
     onLogin({
       email: "business@test.com",
       nickname: form.businessName || "맛난이 사업자",
-      region: form.region,
+      region: normalizeRegionLabel(form.region),
       role: "BUSINESS",
       verifyStatus: "VERIFIED",
     });
@@ -90,7 +85,7 @@ export function BusinessSignupPage({ onNavigate, onLogin }) {
               results={regionResults}
               onKeywordChange={setRegionKeyword}
               onSelect={(regionLabel) => {
-                updateForm("region", regionLabel);
+                updateForm("region", normalizeRegionLabel(regionLabel));
                 setRegionSearchOpen(false);
               }}
             />

@@ -9,7 +9,7 @@ import {
   UserRound,
 } from "lucide-react";
 
-export function MyPage({ currentUser, products, onNavigate, onNavigateToSales }) {
+export function MyPage({ currentUser, products, reservations = [], onNavigate, onNavigateToSales }) {
   if (!currentUser) {
     return (
       <section className="detail-empty">
@@ -22,9 +22,17 @@ export function MyPage({ currentUser, products, onNavigate, onNavigateToSales })
   }
 
   const myProducts = products.filter((product) => product.seller === currentUser.nickname);
-  const sellingCount = myProducts.filter((product) => product.status === "판매중").length;
-  const reservedCount = myProducts.filter((product) => product.status === "예약중").length;
-  const soldOutCount = myProducts.filter((product) => product.status === "판매완료").length;
+  const sellingCount = myProducts.filter(
+    (product) => product.statusTone === "sale" || product.status === "판매중",
+  ).length;
+  const reservedCount = reservations.filter(
+    (reservation) =>
+      reservation.buyerName === currentUser.nickname &&
+      ["REQUESTED", "ACCEPTED"].includes(reservation.status),
+  ).length;
+  const soldOutCount = myProducts.filter(
+    (product) => product.statusTone === "soldout" || product.status === "판매완료",
+  ).length;
 
   return (
     <section className="mypage">
@@ -55,7 +63,7 @@ export function MyPage({ currentUser, products, onNavigate, onNavigateToSales })
         <button
           className="mypage-stat-btn"
           type="button"
-          onClick={() => onNavigateToSales("reserved")}
+          onClick={() => onNavigate("/mypage/reservations")}
         >
           <strong>{reservedCount}</strong>
           <span>예약중</span>

@@ -75,17 +75,19 @@ export function TransactionHistoryPage({
         )
         .map((reservation) => ({
           ...reservation,
-          product: products.find((product) => product.id === reservation.productId),
+          product:
+            products.find((product) => String(product.id) === String(reservation.productId)) ||
+            reservation.product,
           hasReservation: true,
         }));
     }
 
-    return products
+    const productTransactions = products
       .filter((product) => product.seller === currentUser?.nickname)
       .map((product) => {
         const reservation = reservations.find(
           (item) =>
-            item.productId === product.id &&
+            String(item.productId) === String(product.id) &&
             item.sellerName === currentUser?.nickname &&
             item.status !== "CANCELED",
         );
@@ -102,6 +104,26 @@ export function TransactionHistoryPage({
           hasReservation: Boolean(reservation),
         };
       });
+
+    const seenProductIds = new Set(
+      productTransactions.map((transaction) => String(transaction.productId)),
+    );
+    const reservationOnlyTransactions = reservations
+      .filter(
+        (reservation) =>
+          reservation.sellerName === currentUser?.nickname &&
+          reservation.status !== "CANCELED" &&
+          !seenProductIds.has(String(reservation.productId)),
+      )
+      .map((reservation) => ({
+        ...reservation,
+        product:
+          products.find((product) => String(product.id) === String(reservation.productId)) ||
+          reservation.product,
+        hasReservation: true,
+      }));
+
+    return [...productTransactions, ...reservationOnlyTransactions];
   },
     [currentUser?.nickname, products, reservations, type],
   );
@@ -234,7 +256,7 @@ function HistoryCard({ type, transaction, reviews, onNavigate, onUpdateReservati
                   ? `${transaction.buyerName} 예약`
                   : "예약 대기중"}
             </p>
-            <h2>{product?.title || "삭제된 상품"}</h2>
+            <h2>{product?.title || transaction.productTitle || "삭제된 상품"}</h2>
           </div>
           <span className={`reservation-status ${status.tone}`}>{status.label}</span>
         </div>
@@ -242,7 +264,7 @@ function HistoryCard({ type, transaction, reviews, onNavigate, onUpdateReservati
         <div className="reservation-meta">
           <span>
             <MapPin size={16} />
-            {product?.region || "지역 정보 없음"}
+            {product?.region || product?.regionName || "지역 정보 없음"}
           </span>
           <span>
             <Clock3 size={16} />

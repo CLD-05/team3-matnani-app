@@ -3,8 +3,8 @@ import client from "./client";
 // 예약 상태에 따른 상품 상태 변경
 const productStatusByReservation = {
   REQUESTED: { status: "예약중", statusTone: "reserved" },
-  ACCEPTED:  { status: "예약중", statusTone: "reserved" },
-  CANCELED:  { status: "판매중", statusTone: "sale" },
+  ACCEPTED: { status: "예약중", statusTone: "reserved" },
+  CANCELED: { status: "판매중", statusTone: "sale" },
   COMPLETED: { status: "판매완료", statusTone: "soldout" },
 };
 
@@ -21,15 +21,19 @@ function formatRelativeTime(isoString) {
   return `${days}일 전`;
 }
 
-function normalizeReservation(r) {
+function normalizeReservation(r, fallbackProduct = null) {
+  const product = r.product || r.productResponse || r.productDto || fallbackProduct;
+  const productId = r.productId || r.product_id || product?.id || fallbackProduct?.id;
+
   return {
     id: r.id,
-    productId: r.productId,
-    productTitle: r.productTitle,
-    buyerName: r.buyerNickname,
-    sellerName: r.sellerNickname,
+    productId,
+    productTitle: r.productTitle || r.title || product?.title || fallbackProduct?.title,
+    product: product || fallbackProduct,
+    buyerName: r.buyerNickname || r.buyerName,
+    sellerName: r.sellerNickname || r.sellerName || product?.seller || fallbackProduct?.seller,
     requestedAt: formatRelativeTime(r.reservedAt),
-    pickupTime: "-",
+    pickupTime: r.pickupTime || product?.pickupWindow || product?.pickup || fallbackProduct?.pickup || "-",
     status: r.status,
     finalPrice: r.finalPrice,
   };
@@ -38,7 +42,7 @@ function normalizeReservation(r) {
 // 예약 생성
 export async function createReservation({ product }) {
   const response = await client.post(`/api/products/${product.id}/reservations`);
-  const reservation = normalizeReservation(response.data.data);
+  const reservation = normalizeReservation(response.data.data, product);
   return {
     reservation,
     productStatus: productStatusByReservation["REQUESTED"],
@@ -50,11 +54,12 @@ export async function updateReservationStatus(reservation, nextStatus) {
   const response = await client.patch(`/api/reservations/${reservation.id}/status`, {
     status: nextStatus,
   });
-  const updated = normalizeReservation(response.data.data);
+  const updated = normalizeReservation(response.data.data, reservation.product);
   return {
     reservationId: updated.id,
+    reservation: updated,
     nextStatus,
-    productId: updated.productId,
+    productId: updated.productId || reservation.productId,
     productStatus: productStatusByReservation[nextStatus] || null,
   };
 }

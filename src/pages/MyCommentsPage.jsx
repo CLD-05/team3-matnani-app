@@ -1,8 +1,55 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { ChevronLeft, MessageSquareText, PackageCheck } from "lucide-react";
-import { myComments } from "../data/activity";
 
-export function MyCommentsPage({ currentUser, onNavigate }) {
+const legacySampleCommentIds = new Set([1, 2]);
+
+function getCommentsStorageKey(productId) {
+  return `matnaniComments:${productId}`;
+}
+
+function loadProductComments(product) {
+  try {
+    const savedComments = localStorage.getItem(getCommentsStorageKey(product.id));
+    const parsedComments = savedComments ? JSON.parse(savedComments) : [];
+    if (!Array.isArray(parsedComments)) return [];
+
+    return parsedComments
+      .filter((comment) => !legacySampleCommentIds.has(comment.id))
+      .map((comment) => {
+        const replies = Array.isArray(comment.replies) ? comment.replies : [];
+        const lastReply = replies.at(-1);
+
+        return {
+          id: `${product.id}-${comment.id}`,
+          productId: product.id,
+          productTitle: product.title,
+          sellerName: product.seller,
+          writerName: comment.writerId || comment.writer,
+          content: comment.content,
+          createdAt: comment.createdAt || "",
+          status: replies.length > 0 ? "답글 완료" : "답글 대기",
+          lastReply: lastReply?.content || "",
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
+export function MyCommentsPage({ currentUser, products = [], onNavigate }) {
+  const comments = useMemo(() => {
+    if (!currentUser) return [];
+
+    return products
+      .flatMap(loadProductComments)
+      .filter(
+        (comment) =>
+          comment.writerName === currentUser.nickname ||
+          comment.sellerName === currentUser.nickname,
+      )
+      .sort((a, b) => String(b.id).localeCompare(String(a.id)));
+  }, [currentUser, products]);
+
   if (!currentUser) {
     return (
       <section className="detail-empty">
@@ -13,11 +60,6 @@ export function MyCommentsPage({ currentUser, onNavigate }) {
       </section>
     );
   }
-
-  const comments = myComments.filter(
-    (comment) =>
-      comment.writerName === currentUser.nickname || comment.sellerName === currentUser.nickname,
-  );
 
   return (
     <section className="activity-page">
