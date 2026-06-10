@@ -27,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final BusinessNumberService businessNumberService;
+    private final TokenRedisService tokenRedisService;
 
     // 일반 회원가입
     @Transactional
@@ -88,7 +89,7 @@ public class AuthService {
         businessProfileRepository.save(profile);
     }
 
-    // 로그인
+    // 로그인 - refresh token Redis에 저장
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다."));
@@ -97,27 +98,57 @@ public class AuthService {
             throw new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        // refresh token Redis에 저장 (7일 TTL)
+        tokenRedisService.saveRefreshToken(user.getId(), refreshToken, jwtService.getRefreshExpiration());
+
         return LoginResponse.builder()
-                .accessToken(jwtService.generateToken(user))
-                .refreshToken(jwtService.generateRefreshToken(user))
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .nickname(user.getNickname())
                 .role(user.getRole().name())
                 .build();
     }
 
-    // 토큰 재발급
+    // 로그아웃 - access token 블랙리스트 등록 + refresh token 삭제
+    public void logout(String accessToken) {
+        if (!jwtService.isValid(accessToken)) return;
+
+        long remaining = jwtService.getRemainingExpiration(accessToken);
+        tokenRedisService.blacklistAccessToken(accessToken, remaining);
+
+        Long userId = jwtService.getUserId(accessToken);
+        tokenRedisService.deleteRefreshToken(userId);
+    }
+
+    // 토큰 재발급 - Redis 검증 + rotation
     public LoginResponse refresh(String refreshToken) {
         if (!jwtService.isValid(refreshToken) || !jwtService.isRefreshToken(refreshToken)) {
             throw new RuntimeException("유효하지 않은 refresh token입니다.");
         }
 
         Long userId = jwtService.getUserId(refreshToken);
+
+        // Redis에 저장된 토큰과 일치하는지 검증
+        if (!tokenRedisService.isValidRefreshToken(userId, refreshToken)) {
+            throw new RuntimeException("만료되거나 이미 사용된 refresh token입니다.");
+        }
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
+        // 기존 refresh token 삭제 후 새로운 토큰 발급 (rotation)
+        tokenRedisService.deleteRefreshToken(userId);
+
+        String newAccessToken = jwtService.generateToken(user);
+        String newRefreshToken = jwtService.generateRefreshToken(user);
+        tokenRedisService.saveRefreshToken(userId, newRefreshToken, jwtService.getRefreshExpiration());
+
         return LoginResponse.builder()
-                .accessToken(jwtService.generateToken(user))
-                .refreshToken(jwtService.generateRefreshToken(user))
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
                 .nickname(user.getNickname())
                 .role(user.getRole().name())
                 .build();

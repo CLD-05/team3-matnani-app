@@ -32,6 +32,10 @@ public class Reservation {
 
     private Integer finalPrice;
 
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer quantity = 1;
+
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private ReservationStatus status = ReservationStatus.REQUESTED;
@@ -55,5 +59,12 @@ public class Reservation {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public void updateStatus(ReservationStatus newStatus) {
+        this.status = newStatus;
+        if (newStatus == ReservationStatus.COMPLETED) {
+            this.completedAt = LocalDateTime.now();
+        }
     }
 }

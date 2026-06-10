@@ -49,6 +49,7 @@ public class SecretCommentService {
     }
 
     // 댓글 목록 (본인 + 판매자만)
+    @Transactional(readOnly = true)
     public List<SecretCommentResponse> getComments(Long userId, Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));

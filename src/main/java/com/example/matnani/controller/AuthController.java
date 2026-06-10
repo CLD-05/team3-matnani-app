@@ -34,8 +34,11 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout() {
-        // Redis 블랙리스트 미구현 - 클라이언트에서 토큰 삭제로 처리
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            authService.logout(authHeader.substring(7));
+        }
         return ResponseEntity.ok(ApiResponse.success(null, "로그아웃 성공"));
     }
 

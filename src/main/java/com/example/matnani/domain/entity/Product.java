@@ -60,6 +60,18 @@ public class Product {
 
     private LocalDateTime expiresAt;
 
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer totalQuantity = 1;
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer perPersonLimit = 1;
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer remainingQuantity = 1;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
@@ -80,6 +92,25 @@ public class Product {
         this.status = status;
     }
 
+    // 재고 차감 - 재고 소진 시 SOLD_OUT 자동 전환
+    public void deductQuantity(int quantity) {
+        if (this.remainingQuantity < quantity) {
+            throw new RuntimeException("재고가 부족합니다.");
+        }
+        this.remainingQuantity -= quantity;
+        if (this.remainingQuantity == 0) {
+            this.status = ProductStatus.SOLD_OUT;
+        }
+    }
+
+    // 재고 복구 (예약 취소 시)
+    public void restoreQuantity(int quantity) {
+        this.remainingQuantity += quantity;
+        if (this.status == ProductStatus.SOLD_OUT && this.remainingQuantity > 0) {
+            this.status = ProductStatus.ON_SALE;
+        }
+    }
+
     public void update(ProductRequest request, Region region) {
         this.region = region;
         this.title = request.getTitle();
@@ -93,5 +124,9 @@ public class Product {
         this.pickupStartAt = request.getPickupStartAt();
         this.pickupEndAt = request.getPickupEndAt();
         this.expiresAt = request.getExpiresAt();
+        if (request.getTotalQuantity() != null) {
+            this.totalQuantity = request.getTotalQuantity();
+            this.perPersonLimit = request.getPerPersonLimit() != null ? request.getPerPersonLimit() : request.getTotalQuantity();
+        }
     }
 }

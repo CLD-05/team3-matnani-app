@@ -27,6 +27,9 @@ public class ProductResponse {
     private LocalDateTime pickupEndAt;
     private LocalDateTime expiresAt;
     private List<String> imageUrls;
+    private Integer totalQuantity;
+    private Integer perPersonLimit;
+    private Integer remainingQuantity;
     private LocalDateTime createdAt;
     private ActiveReservationDto activeReservation;
     private long reviewCount;
@@ -68,6 +71,9 @@ public class ProductResponse {
         response.pickupEndAt = product.getPickupEndAt();
         response.expiresAt = product.getExpiresAt();
         response.imageUrls = imageUrls;
+        response.totalQuantity = product.getTotalQuantity();
+        response.perPersonLimit = product.getPerPersonLimit();
+        response.remainingQuantity = product.getRemainingQuantity();
         response.createdAt = product.getCreatedAt();
         return response;
     }

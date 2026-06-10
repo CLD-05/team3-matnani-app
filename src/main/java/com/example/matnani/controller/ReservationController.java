@@ -1,5 +1,6 @@
 package com.example.matnani.controller;
 
+import com.example.matnani.dto.request.ReservationRequest;
 import com.example.matnani.dto.response.ApiResponse;
 import com.example.matnani.dto.response.ReservationResponse;
 import com.example.matnani.service.ReservationService;
@@ -22,10 +23,12 @@ public class ReservationController {
     @PostMapping("/api/products/{productId}/reservations")
     public ResponseEntity<ApiResponse<ReservationResponse>> createReservation(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long productId) {
+            @PathVariable Long productId,
+            @RequestBody(required = false) ReservationRequest request) {
         Long userId = Long.parseLong(userDetails.getUsername());
+        int quantity = (request != null && request.getQuantity() != null) ? request.getQuantity() : 1;
         return ResponseEntity.ok(ApiResponse.success(
-                reservationService.createReservation(userId, productId), "예약 요청 완료"));
+                reservationService.createReservation(userId, productId, quantity), "예약 요청 완료"));
     }
 
     // 예약 상태 변경

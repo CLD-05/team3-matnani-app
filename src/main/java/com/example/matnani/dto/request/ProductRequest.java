@@ -23,5 +23,7 @@ public class ProductRequest {
     private LocalDateTime pickupStartAt;
     private LocalDateTime pickupEndAt;
     private LocalDateTime expiresAt;
-    private List<String> imageUrls;  // ← 추가
+    private List<String> imageUrls;
+    private Integer totalQuantity;
+    private Integer perPersonLimit;
 }

@@ -23,6 +23,8 @@ public class ProductService {
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final ReviewRepository reviewRepository;
+    private final NotificationRepository notificationRepository;
+    private final SecretCommentRepository secretCommentRepository;
 
     // 홈 피드 - 필터/정렬/페이징
     public List<ProductResponse> getProducts(Long regionId, ProductCategory category,
@@ -103,6 +105,9 @@ public class ProductService {
                         / request.getOriginalPrice()
         ).setScale(2, RoundingMode.HALF_UP);
 
+        int totalQty = request.getTotalQuantity() != null ? request.getTotalQuantity() : 1;
+        int perPersonLmt = request.getPerPersonLimit() != null ? request.getPerPersonLimit() : totalQty;
+
         Product product = Product.builder()
                 .seller(seller)
                 .region(region)
@@ -117,6 +122,9 @@ public class ProductService {
                 .pickupStartAt(request.getPickupStartAt())
                 .pickupEndAt(request.getPickupEndAt())
                 .expiresAt(request.getExpiresAt())
+                .totalQuantity(totalQty)
+                .perPersonLimit(perPersonLmt)
+                .remainingQuantity(totalQty)
                 .build();
 
         productRepository.save(product);
@@ -207,7 +215,28 @@ public class ProductService {
             throw new RuntimeException("판매 중인 상품만 삭제할 수 있습니다.");
         }
 
+        // 연관 데이터 삭제 순서 (FK 제약 위반 방지)
+        // 1. 이 상품의 예약에 달린 알림 삭제
+        List<Long> reservationIds = reservationRepository.findByProductId(productId)
+                .stream().map(Reservation::getId).collect(Collectors.toList());
+        if (!reservationIds.isEmpty()) {
+            notificationRepository.deleteByReservationIdIn(reservationIds);
+            reviewRepository.deleteByReservationIdIn(reservationIds);
+        }
+
+        // 2. 이 상품에 직접 달린 알림 삭제
+        notificationRepository.deleteByProductId(productId);
+
+        // 3. 예약 삭제
+        reservationRepository.deleteAll(reservationRepository.findByProductId(productId));
+
+        // 4. 비밀 댓글 삭제
+        secretCommentRepository.deleteByProductId(productId);
+
+        // 5. 이미지 삭제
         productImageRepository.deleteByProductId(productId);
+
+        // 6. 상품 삭제
         productRepository.delete(product);
     }
 }

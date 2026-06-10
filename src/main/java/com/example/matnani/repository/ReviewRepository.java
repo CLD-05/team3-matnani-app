@@ -12,6 +12,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     boolean existsByReservationId(Long reservationId);
     List<Review> findAllByOrderByCreatedAtDesc();
     List<Review> findByReservation_BuyerId(Long buyerId);
+    void deleteByReservationIdIn(List<Long> reservationIds);
 
     @Query("SELECT COUNT(r) FROM Review r WHERE r.reservation.product.id = :productId")
     long countByProductId(@Param("productId") Long productId);

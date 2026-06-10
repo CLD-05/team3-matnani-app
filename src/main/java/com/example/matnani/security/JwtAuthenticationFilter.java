@@ -1,6 +1,7 @@
 // JwtAuthenticationFilter.java
 package com.example.matnani.security;
 
+import com.example.matnani.service.TokenRedisService;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+    private final TokenRedisService tokenRedisService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -33,7 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
 
-        if (jwtService.isValid(token)) {
+        // 유효한 토큰이고 블랙리스트에 없는 경우만 인증 처리
+        if (jwtService.isValid(token) && !tokenRedisService.isBlacklisted(token)) {
             Long userId = jwtService.getUserId(token);
             UserDetails userDetails = userDetailsService.loadUserByUsername(String.valueOf(userId));
 

@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface SecretCommentRepository extends JpaRepository<SecretComment, Long> {
     List<SecretComment> findByProductId(Long productId);
+    void deleteByProductId(Long productId);
 }

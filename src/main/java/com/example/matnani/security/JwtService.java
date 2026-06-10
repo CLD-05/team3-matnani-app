@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtService {
@@ -58,11 +59,12 @@ public class JwtService {
     }
 
 
-    // refresh token 생성 (7일)
+    // refresh token 생성 (7일) - jti로 매번 고유한 토큰 보장
     public String generateRefreshToken(User user) {
         return Jwts.builder()
                 .setSubject(String.valueOf(user.getId()))
                 .claim("type", "refresh")
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -77,5 +79,19 @@ public class JwtService {
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    // 토큰 남은 유효 시간 반환 (ms) - 블랙리스트 TTL 설정에 사용
+    public long getRemainingExpiration(String token) {
+        try {
+            Date expDate = getClaims(token).getExpiration();
+            return Math.max(0, expDate.getTime() - System.currentTimeMillis());
+        } catch (JwtException | IllegalArgumentException e) {
+            return 0;
+        }
+    }
+
+    public long getRefreshExpiration() {
+        return refreshExpiration;
     }
 }

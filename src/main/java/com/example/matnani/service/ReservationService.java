@@ -6,11 +6,13 @@ import com.example.matnani.dto.response.ReservationResponse;
 import com.example.matnani.repository.*;
 import static com.example.matnani.domain.enums.Enums.*;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,10 +23,31 @@ public class ReservationService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final RedissonClient redissonClient;
 
-    // 예약 생성
+    // 예약 생성 (Redis 분산락 + 재고 기반)
+    public ReservationResponse createReservation(Long buyerId, Long productId, int quantity) {
+        String lockKey = "reservation:product:" + productId;
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            boolean acquired = lock.tryLock(5, 10, TimeUnit.SECONDS);
+            if (!acquired) {
+                throw new RuntimeException("현재 예약 요청이 많습니다. 잠시 후 다시 시도해주세요.");
+            }
+            return createReservationInternal(buyerId, productId, quantity);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("예약 처리 중 오류가 발생했습니다.");
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
     @Transactional
-    public ReservationResponse createReservation(Long buyerId, Long productId) {
+    protected ReservationResponse createReservationInternal(Long buyerId, Long productId, int quantity) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
 
@@ -32,21 +55,35 @@ public class ReservationService {
             throw new DuplicateReservationException("이미 예약 중이거나 판매 완료된 상품입니다.");
         }
 
+        if (product.getSeller().getId().equals(buyerId)) {
+            throw new RuntimeException("본인 상품은 예약할 수 없습니다.");
+        }
+
+        // 인당 구매 한도 초과 여부 확인
+        int alreadyReserved = reservationRepository
+                .findByProductIdAndBuyerIdAndStatus(productId, buyerId, ReservationStatus.REQUESTED)
+                .stream().mapToInt(Reservation::getQuantity).sum();
+        if (alreadyReserved + quantity > product.getPerPersonLimit()) {
+            throw new RuntimeException("인당 구매 한도(" + product.getPerPersonLimit() + "개)를 초과할 수 없습니다.");
+        }
+
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+        // 재고 차감 (재고 소진 시 자동 SOLD_OUT)
+        product.deductQuantity(quantity);
 
         Reservation reservation = Reservation.builder()
                 .product(product)
                 .buyer(buyer)
                 .seller(product.getSeller())
-                .finalPrice(product.getDiscountPrice())
+                .finalPrice(product.getDiscountPrice() * quantity)
+                .quantity(quantity)
                 .status(ReservationStatus.REQUESTED)
                 .build();
 
         reservationRepository.save(reservation);
-        product.updateStatus(ProductStatus.RESERVED);
 
-        // RESERVATION 알림 - product_id NULL
         notificationService.createNotification(
                 product.getSeller(),
                 NotificationType.RESERVATION,
@@ -74,37 +111,30 @@ public class ReservationService {
             throw new RuntimeException("권한이 없습니다.");
         }
 
-        Reservation updated = Reservation.builder()
-                .id(reservation.getId())
-                .product(reservation.getProduct())
-                .buyer(reservation.getBuyer())
-                .seller(reservation.getSeller())
-                .finalPrice(reservation.getFinalPrice())
-                .status(status)
-                .reservedAt(reservation.getReservedAt())
-                .completedAt(status == ReservationStatus.COMPLETED ? LocalDateTime.now() : null)
-                .build();
+        reservation.updateStatus(status);
 
-        reservationRepository.save(updated);
-
+        // 재고 기반 상품 상태 동기화
         Product product = reservation.getProduct();
         if (status == ReservationStatus.CANCELED) {
-            product.updateStatus(ProductStatus.ON_SALE);
+            // 취소 시 재고 복구 (재고 > 0 이면 자동 ON_SALE)
+            product.restoreQuantity(reservation.getQuantity());
         } else if (status == ReservationStatus.COMPLETED) {
-            product.updateStatus(ProductStatus.SOLD_OUT);
+            // 완료 시: 잔여 재고가 없으면 SOLD_OUT, 있으면 그대로
+            if (product.getRemainingQuantity() == 0) {
+                product.updateStatus(ProductStatus.SOLD_OUT);
+            }
         }
 
         // STATUS_CHANGE 알림 - 행위자의 상대방에게 전송
-        // 구매자가 취소 → 판매자에게 알림 / 판매자가 변경 → 구매자에게 알림
         User notifyTarget = isBuyer ? reservation.getSeller() : reservation.getBuyer();
         notificationService.createNotification(
                 notifyTarget,
                 NotificationType.STATUS_CHANGE,
                 null,
-                updated
+                reservation
         );
 
-        return ReservationResponse.from(updated);
+        return ReservationResponse.from(reservation);
     }
 
     // 구매 내역 (완료된 것만)

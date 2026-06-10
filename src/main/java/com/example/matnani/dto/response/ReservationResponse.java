@@ -13,6 +13,7 @@ public class ReservationResponse {
     private String buyerNickname;
     private String sellerNickname;
     private Integer finalPrice;
+    private Integer quantity;
     private ReservationStatus status;
     private LocalDateTime reservedAt;
     private LocalDateTime completedAt;
@@ -25,6 +26,7 @@ public class ReservationResponse {
         response.buyerNickname = reservation.getBuyer().getNickname();
         response.sellerNickname = reservation.getSeller().getNickname();
         response.finalPrice = reservation.getFinalPrice();
+        response.quantity = reservation.getQuantity();
         response.status = reservation.getStatus();
         response.reservedAt = reservation.getReservedAt();
         response.completedAt = reservation.getCompletedAt();
