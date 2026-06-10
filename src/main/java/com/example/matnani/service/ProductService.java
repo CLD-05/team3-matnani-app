@@ -211,8 +211,8 @@ public class ProductService {
             throw new RuntimeException("삭제 권한이 없습니다.");
         }
 
-        if (!product.getStatus().equals(ProductStatus.ON_SALE)) {
-            throw new RuntimeException("판매 중인 상품만 삭제할 수 있습니다.");
+        if (product.getStatus().equals(ProductStatus.RESERVED)) {
+            throw new RuntimeException("예약 중인 상품은 삭제할 수 없습니다.");
         }
 
         // 연관 데이터 삭제 순서 (FK 제약 위반 방지)
