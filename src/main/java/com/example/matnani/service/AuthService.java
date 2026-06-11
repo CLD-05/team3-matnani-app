@@ -60,8 +60,8 @@ public class AuthService {
         if (businessProfileRepository.existsByBusinessNumber(request.getBusinessNumber())) {
             throw new RuntimeException("이미 등록된 사업자번호입니다.");
         }
-        if (!businessNumberService.verify(request.getBusinessNumber())) {
-            throw new RuntimeException("유효하지 않은 사업자번호입니다.");
+        if (!businessNumberService.verify(request.getBusinessNumber(), request.getOwnerName(), request.getStartDate())) {
+            throw new RuntimeException("사업자등록정보가 일치하지 않습니다. 사업자번호, 대표자성명, 개업일자를 확인해주세요.");
         }
 
         Region region = regionRepository.findById(request.getRegionId())
