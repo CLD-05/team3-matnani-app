@@ -31,6 +31,14 @@ export async function signupUser({ email, password, nickname, phone, regionId })
   return loginUser({ email, password });
 }
 
+export async function businessSignupUser({ email, password, nickname, phone, regionId, businessNumber, businessName, ownerName, startDate }) {
+  await client.post("/api/auth/signup/business", {
+    email, password, nickname, phone, regionId,
+    businessNumber, businessName, ownerName, startDate,
+  });
+  return loginUser({ email, password });
+}
+
 export async function logoutUser() {
   localStorage.removeItem("matnaniToken");
   localStorage.removeItem("matnaniUser");

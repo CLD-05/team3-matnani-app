@@ -9,6 +9,7 @@ import {
   getRegionDong,
   normalizeRegionLabel,
 } from "../utils/regions";
+import { uploadImages } from "../api/images";
 
 function toDateTimeLocal(date) {
   const pad = (value) => String(value).padStart(2, "0");
@@ -131,10 +132,13 @@ export function ProductCreatePage({
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
   const [imagePreviews, setImagePreviews] = useState(() => productToEdit?.image ? [productToEdit.image] : []);
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imageUploading, setImageUploading] = useState(false);
 
   useEffect(() => {
     setForm(productToEdit ? createEditForm(productToEdit, defaultRegionLabel) : createInitialForm(defaultRegionLabel));
     setImagePreviews(productToEdit?.image ? [productToEdit.image] : []);
+    setImageFiles([]);
     setMessage("");
   }, [defaultRegionLabel, productToEdit]);
 
@@ -142,9 +146,11 @@ export function ProductCreatePage({
 
   const handleImageChange = (event) => {
     const files = Array.from(event.target.files || []).slice(0, 5);
-
     if (files.length === 0) return;
 
+    setImageFiles(files);
+
+    // 로컬 미리보기
     Promise.all(
       files.map(
         (file) =>
@@ -233,6 +239,22 @@ export function ProductCreatePage({
       return;
     }
 
+    // S3 업로드 (새로 선택한 파일만)
+    let uploadedImageUrls = imagePreviews.filter((p) => p.startsWith("http"));
+    if (imageFiles.length > 0) {
+      setImageUploading(true);
+      try {
+        uploadedImageUrls = await uploadImages(imageFiles);
+        setImagePreviews(uploadedImageUrls);
+        setImageFiles([]);
+      } catch {
+        setMessage("이미지 업로드에 실패했습니다. 다시 시도해주세요.");
+        setImageUploading(false);
+        return;
+      }
+      setImageUploading(false);
+    }
+
     const normalizedRegionLabel = normalizeRegionLabel(form.regionLabel);
     const pickupLabel = formatDateTimeLabel(form.pickupStartAt);
     const pickupEndLabel = formatDateTimeLabel(form.pickupEndAt);
@@ -265,8 +287,8 @@ export function ProductCreatePage({
         ? productToEdit.expiresInMinutes
         : getMinutesUntil(form.expiresAt),
       deadlineInMinutes: getMinutesUntil(form.pickupEndAt || form.pickupStartAt),
-      image: imagePreviews[0],
-      imageUrls: imagePreviews,
+      image: uploadedImageUrls[0] || imagePreviews[0],
+      imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : imagePreviews,
     };
 
     try {
@@ -286,10 +308,6 @@ export function ProductCreatePage({
         rating: "0.0",
         reviews: 0,
         createdMinutes: 0,
-        image:
-          imagePreviews[0] ||
-          "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&w=900&q=80",
-        imageUrls: imagePreviews,
       });
       setMessage("상품이 등록되었습니다.");
       window.alert("상품 등록이 완료되었습니다.");
@@ -482,8 +500,8 @@ export function ProductCreatePage({
             />
           </label>
           {message && <p className="form-success">{message}</p>}
-          <button className="auth-submit" type="submit">
-            {isEditMode ? "수정 완료" : "상품 등록"}
+          <button className="auth-submit" type="submit" disabled={imageUploading}>
+            {imageUploading ? "이미지 업로드 중..." : isEditMode ? "수정 완료" : "상품 등록"}
           </button>
         </form>
       </section>
