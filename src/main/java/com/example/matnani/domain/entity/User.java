@@ -1,4 +1,3 @@
-// User.java
 package com.example.matnani.domain.entity;
 
 import jakarta.persistence.*;
@@ -37,6 +36,11 @@ public class User {
     @JoinColumn(name = "region_id")
     private Region region;
 
+    @Builder.Default
+    private int noShowCount = 0;
+
+    private LocalDateTime bannedUntil;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
@@ -53,8 +57,7 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 
-    public void updateRegion(Region region) {
-        this.region = region;
-    }
-
+    public void updateRegion(Region region) { this.region = region; }
+    public void setNoShowCount(int count) { this.noShowCount = count; }
+    public void setBannedUntil(LocalDateTime date) { this.bannedUntil = date; }
 }

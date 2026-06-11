@@ -28,22 +28,15 @@ public class ProductResponse {
     private LocalDateTime expiresAt;
     private List<String> imageUrls;
     private LocalDateTime createdAt;
-    private ActiveReservationDto activeReservation;
 
-    @Getter
-    public static class ActiveReservationDto {
-        private Long reservationId;
-        private ReservationStatus status;
-        private Long buyerId;
+    // 재고 관련
+    private Integer totalQuantity;
+    private Integer perPersonLimit;
+    private Integer remainingQuantity;
 
-        public static ActiveReservationDto of(Long reservationId, ReservationStatus status, Long buyerId) {
-            ActiveReservationDto dto = new ActiveReservationDto();
-            dto.reservationId = reservationId;
-            dto.status = status;
-            dto.buyerId = buyerId;
-            return dto;
-        }
-    }
+    // 픽업 임박 할인
+    private int timedDiscountRate;
+    private int discountLevel;
 
     public static ProductResponse from(Product product, List<String> imageUrls) {
         ProductResponse response = new ProductResponse();
@@ -67,10 +60,11 @@ public class ProductResponse {
         response.expiresAt = product.getExpiresAt();
         response.imageUrls = imageUrls;
         response.createdAt = product.getCreatedAt();
+        response.totalQuantity = product.getTotalQuantity();
+        response.perPersonLimit = product.getPerPersonLimit();
+        response.remainingQuantity = product.getRemainingQuantity();
+        response.timedDiscountRate = product.getTimedDiscountRate();
+        response.discountLevel = product.getDiscountLevel();
         return response;
-    }
-
-    public void setActiveReservation(ActiveReservationDto activeReservation) {
-        this.activeReservation = activeReservation;
     }
 }

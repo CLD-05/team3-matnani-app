@@ -24,4 +24,7 @@ public class ProductRequest {
     private LocalDateTime pickupEndAt;
     private LocalDateTime expiresAt;
     private List<String> imageUrls;  // ← 추가
+    private Integer timedDiscountRate;
+    private Integer totalQuantity;      // 총 판매 개수
+    private Integer perPersonLimit;     // 1인당 최대 구매 개수
 }

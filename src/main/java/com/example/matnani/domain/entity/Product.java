@@ -50,7 +50,7 @@ public class Product {
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private ProductStatus status = ProductStatus.ON_SALE;  // SELLING → ON_SALE
+    private ProductStatus status = ProductStatus.ON_SALE;
 
     private String pickupPlace;
 
@@ -60,10 +60,28 @@ public class Product {
 
     private LocalDateTime expiresAt;
 
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer totalQuantity = 1;
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer perPersonLimit = 1;
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
+    @Builder.Default
+    private Integer remainingQuantity = 1;
+
+    @Builder.Default
+    private int discountLevel = 0;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    @Builder.Default
+    private int timedDiscountRate = 0;
 
     @PrePersist
     protected void onCreate() {
@@ -76,9 +94,12 @@ public class Product {
         updatedAt = LocalDateTime.now();
     }
 
-    public void updateStatus(ProductStatus status) {
-        this.status = status;
-    }
+    public void updateStatus(ProductStatus status) { this.status = status; }
+    public void setRemainingQuantity(int quantity) { this.remainingQuantity = quantity; }
+    public void setDiscountPrice(Integer price) { this.discountPrice = price; }
+    public void setDiscountRate(BigDecimal rate) { this.discountRate = rate; }
+    public void setDiscountLevel(int level) { this.discountLevel = level; }
+    public void setTimedDiscountRate(int rate) { this.timedDiscountRate = rate; }
 
     public void update(ProductRequest request, Region region) {
         this.region = region;
