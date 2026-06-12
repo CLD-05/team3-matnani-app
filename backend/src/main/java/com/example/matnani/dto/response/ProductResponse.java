@@ -35,7 +35,6 @@ public class ProductResponse {
     private ActiveReservationDto activeReservation;
     private long reviewCount;
     private double averageRating;
-    // 픽업 임박 할인
     private int timedDiscountRate;
     private int discountLevel;
 
@@ -66,9 +65,6 @@ public class ProductResponse {
         response.perPersonLimit = product.getPerPersonLimit();
         response.remainingQuantity = product.getRemainingQuantity();
         response.createdAt = product.getCreatedAt();
-        response.totalQuantity = product.getTotalQuantity();
-        response.perPersonLimit = product.getPerPersonLimit();
-        response.remainingQuantity = product.getRemainingQuantity();
         response.timedDiscountRate = product.getTimedDiscountRate();
         response.discountLevel = product.getDiscountLevel();
         return response;
@@ -81,5 +77,20 @@ public class ProductResponse {
     public void setReviewStats(long reviewCount, double averageRating) {
         this.reviewCount = reviewCount;
         this.averageRating = averageRating;
+    }
+
+    @Getter
+    public static class ActiveReservationDto {
+        private Long reservationId;
+        private ReservationStatus status;
+        private Long buyerId;
+
+        public static ActiveReservationDto of(Long reservationId, ReservationStatus status, Long buyerId) {
+            ActiveReservationDto dto = new ActiveReservationDto();
+            dto.reservationId = reservationId;
+            dto.status = status;
+            dto.buyerId = buyerId;
+            return dto;
+        }
     }
 }

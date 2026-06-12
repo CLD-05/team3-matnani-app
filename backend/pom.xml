@@ -92,13 +92,6 @@
             <version>2.3.0</version>
         </dependency>
 
-        <!-- Redisson (Redis 분산락 - 스타터 대신 코어만 사용) -->
-        <dependency>
-            <groupId>org.redisson</groupId>
-            <artifactId>redisson</artifactId>
-            <version>3.39.0</version>
-        </dependency>
-
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

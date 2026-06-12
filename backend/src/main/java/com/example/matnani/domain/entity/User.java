@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
-import javax.swing.plaf.synth.Region;
+import com.example.matnani.domain.entity.Region;
 
 import com.example.matnani.domain.enums.Enums.*;
 

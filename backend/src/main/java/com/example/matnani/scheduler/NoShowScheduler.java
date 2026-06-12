@@ -38,16 +38,10 @@ public class NoShowScheduler {
 
             // 노쇼 카운트 + 패널티
             User buyer = reservation.getBuyer();
-            int newCount = buyer.getNoShowCount() + 1;
-            buyer.setNoShowCount(newCount);
-            if (newCount >= 3) {
-                buyer.setBannedUntil(LocalDateTime.now().plusDays(7));
-                log.info("구매 제한 적용 - 구매자: {}, 해제일: {}",
-                        buyer.getNickname(), buyer.getBannedUntil());
-            }
+            buyer.addNoShowPenalty();
 
             log.info("노쇼 처리 - 예약ID: {}, 구매자: {}, 누적횟수: {}",
-                    reservation.getId(), buyer.getNickname(), newCount);
+                    reservation.getId(), buyer.getNickname(), buyer.getNoShowCount());
         }
     }
 }
