@@ -44,7 +44,7 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
                 .phone(request.getPhone())
-                .role(UserRole.NORMAL)   // 버그 수정
+                .role(UserRole.NORMAL) // 버그 수정
                 .region(region)
                 .build();
 
@@ -60,7 +60,8 @@ public class AuthService {
         if (businessProfileRepository.existsByBusinessNumber(request.getBusinessNumber())) {
             throw new RuntimeException("이미 등록된 사업자번호입니다.");
         }
-        if (!businessNumberService.verify(request.getBusinessNumber(), request.getOwnerName(), request.getStartDate())) {
+        if (!businessNumberService.verify(request.getBusinessNumber(), request.getOwnerName(),
+                request.getStartDate())) {
             throw new RuntimeException("사업자등록정보가 일치하지 않습니다. 사업자번호, 대표자성명, 개업일자를 확인해주세요.");
         }
 
@@ -114,7 +115,8 @@ public class AuthService {
 
     // 로그아웃 - access token 블랙리스트 등록 + refresh token 삭제
     public void logout(String accessToken) {
-        if (!jwtService.isValid(accessToken)) return;
+        if (!jwtService.isValid(accessToken))
+            return;
 
         long remaining = jwtService.getRemainingExpiration(accessToken);
         tokenRedisService.blacklistAccessToken(accessToken, remaining);

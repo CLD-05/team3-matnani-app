@@ -37,6 +37,12 @@ public class User {
     @JoinColumn(name = "region_id")
     private Region region;
 
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    @Builder.Default
+    private Integer noShowCount = 0;
+
+    private LocalDateTime purchaseRestrictedUntil;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
@@ -55,6 +61,17 @@ public class User {
 
     public void updateRegion(Region region) {
         this.region = region;
+    }
+
+    public boolean isPurchaseRestricted() {
+        return purchaseRestrictedUntil != null && purchaseRestrictedUntil.isAfter(LocalDateTime.now());
+    }
+
+    public void addNoShowPenalty() {
+        this.noShowCount = (this.noShowCount == null ? 0 : this.noShowCount) + 1;
+        if (this.noShowCount >= 2) {
+            this.purchaseRestrictedUntil = LocalDateTime.now().plusDays(7);
+        }
     }
 
 }

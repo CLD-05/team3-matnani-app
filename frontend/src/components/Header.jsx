@@ -15,7 +15,7 @@ export function Header({
   const navItems = [
     { label: "홈", path: "/" },
     { label: "맛난이 장터", path: "/market" },
-    { label: "상품 등록", path: "/products/new" },
+    { label: "상품 등록", path: "/products/new", businessOnly: true },
   ];
   const [regionPickerOpen, setRegionPickerOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
@@ -53,6 +53,10 @@ export function Header({
             href={item.path}
             onClick={(event) => {
               event.preventDefault();
+              if (item.businessOnly && currentUser && currentUser.role !== "BUSINESS") {
+                window.alert("사업자 회원만 가능합니다.");
+                return;
+              }
               onNavigate(item.path);
             }}
           >

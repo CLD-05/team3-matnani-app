@@ -27,10 +27,10 @@ public class Enums {
     }
 
     public enum ReservationStatus {
-        REQUESTED, ACCEPTED, CANCELED, COMPLETED
+        REQUESTED, ACCEPTED, CANCELED, COMPLETED, NO_SHOW
     }
 
     public enum NotificationType {
-        COMMENT, RESERVATION, STATUS_CHANGE
+        COMMENT, RESERVATION, STATUS_CHANGE, PICKUP_REMINDER, NO_SHOW
     }
 }

@@ -24,14 +24,26 @@ function isOnSale(product) {
 
 export function HomePage({ products, onNavigate }) {
   const onSaleProducts = products.filter(isOnSale);
-  const recommendedProducts = products
-    .filter(isOnSale)
-    .sort((a, b) => Number(b.rating) - Number(a.rating))
-    .slice(0, 4);
+  const activeRecommendedProducts = products
+    .filter(
+      (product) =>
+        Number(product.remainingQuantity ?? 0) > 0 &&
+        (Number(product.reservedQuantity || 0) > 0 || Number(product.completedQuantity || 0) > 0),
+    )
+    .sort((a, b) => {
+      const bActivity = Number(b.reservedQuantity || 0) + Number(b.completedQuantity || 0);
+      const aActivity = Number(a.reservedQuantity || 0) + Number(a.completedQuantity || 0);
+      return bActivity - aActivity || Number(b.rating) - Number(a.rating);
+    });
+  const recommendedProducts = activeRecommendedProducts.slice(0, 4);
   const urgentProducts = onSaleProducts
     .filter((product) => getDeadlineMinutes(product) > 0)
     .sort((a, b) => getDeadlineMinutes(a) - getDeadlineMinutes(b))
     .slice(0, 4);
+  const timeSaleProducts = onSaleProducts
+    .filter((product) => product.timeSale)
+    .sort((a, b) => getDeadlineMinutes(a) - getDeadlineMinutes(b))
+    .slice(0, 6);
   const previewProducts = products.slice(0, 4);
 
   return (
@@ -60,22 +72,43 @@ export function HomePage({ products, onNavigate }) {
         </div>
       </section>
 
-      <HomeSection
-        kicker="추천 상품"
-        title="동네에서 반응 좋은 상품"
-        actionLabel="장터 보기"
-        onAction={() => onNavigate("/market")}
-      >
-        <div className="product-grid">
-          {recommendedProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onClick={() => onNavigate(`/products/${product.id}`)}
-            />
-          ))}
-        </div>
-      </HomeSection>
+      {timeSaleProducts.length > 0 && (
+        <HomeSection
+          kicker="타임특가"
+          title="지금 안사면 후회하는 진짜 타임특가"
+          actionLabel="타임특가 보러가기"
+          onAction={() => onNavigate("/market")}
+        >
+          <div className="product-grid">
+            {timeSaleProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onClick={() => onNavigate(`/products/${product.id}`)}
+              />
+            ))}
+          </div>
+        </HomeSection>
+      )}
+
+      {recommendedProducts.length > 0 && (
+        <HomeSection
+          kicker="추천 상품"
+          title="동네에서 반응 좋은 상품"
+          actionLabel="장터 보기"
+          onAction={() => onNavigate("/market")}
+        >
+          <div className="product-grid">
+            {recommendedProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onClick={() => onNavigate(`/products/${product.id}`)}
+              />
+            ))}
+          </div>
+        </HomeSection>
+      )}
 
       <HomeSection
         kicker="마감 임박 상품"

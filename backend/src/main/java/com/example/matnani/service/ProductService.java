@@ -28,32 +28,39 @@ public class ProductService {
 
     // 홈 피드 - 필터/정렬/페이징
     public List<ProductResponse> getProducts(Long regionId, ProductCategory category,
-                                             String sort, ProductStatus status,
-                                             int page, int size) {
+            String sort, ProductStatus status,
+            int page, int size) {
         ProductStatus filterStatus = status != null ? status : ProductStatus.ON_SALE;
 
         List<Product> products = productRepository.findWithFilters(regionId, filterStatus, category);
 
         switch (sort) {
             case "near_expiry" -> products.sort((a, b) -> {
-                if (a.getExpiresAt() == null) return 1;
-                if (b.getExpiresAt() == null) return -1;
+                if (a.getExpiresAt() == null)
+                    return 1;
+                if (b.getExpiresAt() == null)
+                    return -1;
                 return a.getExpiresAt().compareTo(b.getExpiresAt());
             });
             case "discount_high" -> products.sort((a, b) -> {
-                if (a.getDiscountRate() == null) return 1;
-                if (b.getDiscountRate() == null) return -1;
+                if (a.getDiscountRate() == null)
+                    return 1;
+                if (b.getDiscountRate() == null)
+                    return -1;
                 return b.getDiscountRate().compareTo(a.getDiscountRate());
             });
             default -> products.sort((a, b) -> {
-                if (a.getCreatedAt() == null) return 1;
-                if (b.getCreatedAt() == null) return -1;
+                if (a.getCreatedAt() == null)
+                    return 1;
+                if (b.getCreatedAt() == null)
+                    return -1;
                 return b.getCreatedAt().compareTo(a.getCreatedAt());
             });
         }
 
         int fromIndex = page * size;
-        if (fromIndex >= products.size()) return List.of();
+        if (fromIndex >= products.size())
+            return List.of();
         int toIndex = Math.min(fromIndex + size, products.size());
         products = products.subList(fromIndex, toIndex);
 
@@ -67,8 +74,14 @@ public class ProductService {
         return productRepository
                 .findByRegionIdAndStatus(regionId, ProductStatus.ON_SALE)
                 .stream()
-                .filter(p -> p.getExpiresAt() != null)
-                .sorted((a, b) -> a.getExpiresAt().compareTo(b.getExpiresAt()))
+                .filter(p -> Boolean.TRUE.equals(p.getTimeSale()))
+                .sorted((a, b) -> {
+                    if (a.getExpiresAt() == null)
+                        return 1;
+                    if (b.getExpiresAt() == null)
+                        return -1;
+                    return a.getExpiresAt().compareTo(b.getExpiresAt());
+                })
                 .map(this::buildResponse)
                 .collect(Collectors.toList());
     }
@@ -82,7 +95,7 @@ public class ProductService {
 
         if (product.getStatus() == ProductStatus.RESERVED) {
             reservationRepository.findByProductIdAndStatusIn(
-                            productId, List.of(ReservationStatus.REQUESTED, ReservationStatus.ACCEPTED))
+                    productId, List.of(ReservationStatus.REQUESTED, ReservationStatus.ACCEPTED))
                     .ifPresent(r -> response.setActiveReservation(
                             ProductResponse.ActiveReservationDto.of(
                                     r.getId(), r.getStatus(), r.getBuyer().getId())));
@@ -96,17 +109,26 @@ public class ProductService {
     public ProductResponse createProduct(Long userId, ProductRequest request) {
         User seller = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+        if (seller.getRole() != UserRole.BUSINESS) {
+            throw new RuntimeException("사업자 회원만 상품을 등록할 수 있습니다.");
+        }
         Region region = regionRepository.findById(request.getRegionId())
                 .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
 
         // discount_rate 서버에서 자동 계산
         BigDecimal discountRate = BigDecimal.valueOf(
                 (request.getOriginalPrice() - request.getDiscountPrice()) * 100.0
-                        / request.getOriginalPrice()
-        ).setScale(2, RoundingMode.HALF_UP);
+                        / request.getOriginalPrice())
+                .setScale(2, RoundingMode.HALF_UP);
 
         int totalQty = request.getTotalQuantity() != null ? request.getTotalQuantity() : 1;
         int perPersonLmt = request.getPerPersonLimit() != null ? request.getPerPersonLimit() : totalQty;
+        if (totalQty < 1) {
+            throw new RuntimeException("총 판매 수량은 1개 이상이어야 합니다.");
+        }
+        if (perPersonLmt < 1 || perPersonLmt > totalQty) {
+            throw new RuntimeException("1인당 구매 제한은 1개 이상, 총 판매 수량 이하로 설정해주세요.");
+        }
 
         Product product = Product.builder()
                 .seller(seller)
@@ -122,6 +144,7 @@ public class ProductService {
                 .pickupStartAt(request.getPickupStartAt())
                 .pickupEndAt(request.getPickupEndAt())
                 .expiresAt(request.getExpiresAt())
+                .timeSale(request.getTimeSale() != null && request.getTimeSale())
                 .totalQuantity(totalQty)
                 .perPersonLimit(perPersonLmt)
                 .remainingQuantity(totalQty)
@@ -168,8 +191,7 @@ public class ProductService {
         ProductResponse response = ProductResponse.from(product, imageUrls);
         response.setReviewStats(
                 reviewRepository.countByProductId(product.getId()),
-                reviewRepository.findAverageRatingByProductId(product.getId())
-        );
+                reviewRepository.findAverageRatingByProductId(product.getId()));
         return response;
     }
 

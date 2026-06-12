@@ -9,6 +9,7 @@ public class SecretCommentResponse {
     private Long id;
     private Long writerId;
     private String writerNickname;
+    private Long parentCommentId;
     private boolean isSeller;
     private String content;
     private LocalDateTime createdAt;
@@ -19,6 +20,7 @@ public class SecretCommentResponse {
         response.id = comment.getId();
         response.writerId = comment.getWriter().getId();
         response.writerNickname = comment.getWriter().getNickname();
+        response.parentCommentId = comment.getParent() != null ? comment.getParent().getId() : null;
         response.isSeller = comment.getWriter().getId()
                 .equals(comment.getProduct().getSeller().getId());
         response.content = comment.getContent();

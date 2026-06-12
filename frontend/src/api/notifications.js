@@ -2,15 +2,19 @@ import client from "./client";
 
 // 알림 타입 → 한국어 라벨
 const TYPE_LABEL = {
-  RESERVATION:   "예약",
+  RESERVATION: "예약",
   STATUS_CHANGE: "예약상태",
+  COMMENT: "댓글",
+  PICKUP_REMINDER: "픽업알림",
+  NO_SHOW: "노쇼",
 };
 
 // 예약 상태 → 알림 메시지
 const STATUS_MESSAGE = {
-  ACCEPTED:  "예약이 수락되었습니다.",
-  CANCELED:  "예약이 취소되었습니다.",
+  ACCEPTED: "예약이 수락되었습니다.",
+  CANCELED: "예약이 취소되었습니다.",
   COMPLETED: "거래가 완료되었습니다.",
+  NO_SHOW: "노쇼 처리되어 구매 제한 패널티가 반영되었습니다.",
   REQUESTED: "새 예약 요청이 들어왔습니다.",
 };
 
@@ -19,12 +23,24 @@ function buildContent(type, productTitle, reservationStatus) {
   if (type === "RESERVATION") {
     return `${title}새 예약 요청이 들어왔습니다.`;
   }
+  if (type === "COMMENT") {
+    return `${title}비밀 댓글이 달렸습니다.`;
+  }
+  if (type === "PICKUP_REMINDER") {
+    return `${title}픽업 시간이 1시간 이내로 남았습니다.`;
+  }
+  if (type === "NO_SHOW") {
+    return `${title}노쇼 처리되어 일정 기간 구매가 제한될 수 있습니다.`;
+  }
   const statusMsg = STATUS_MESSAGE[reservationStatus] || "예약 상태가 변경되었습니다.";
   return `${title}${statusMsg}`;
 }
 
-function buildTargetPath(type, reservationStatus) {
+function buildTargetPath(type, reservationStatus, productId) {
   if (type === "RESERVATION") return "/mypage/sales";
+  if (type === "COMMENT" && productId) return `/products/${productId}`;
+  if (type === "COMMENT") return "/mypage/notifications";
+  if (type === "PICKUP_REMINDER" || type === "NO_SHOW") return "/mypage/reservations";
   if (type === "STATUS_CHANGE" && reservationStatus === "COMPLETED") return "/mypage/purchases";
   return "/mypage/reservations";
 }
@@ -57,7 +73,7 @@ function normalizeNotification(n) {
     actorAvatar: "",
     receivedAt: formatRelativeTime(n.createdAt),
     content: buildContent(typeStr, n.productTitle, n.reservationStatus),
-    targetPath: buildTargetPath(typeStr, n.reservationStatus),
+    targetPath: buildTargetPath(typeStr, n.reservationStatus, n.productId),
     targetTab: buildTargetTab(typeStr),
     unread: !n.isRead,
     reservationId: n.reservationId,

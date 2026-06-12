@@ -544,6 +544,14 @@ a {
   font-weight: 700;
 }
 
+.quantity-summary {
+  margin: 4px 0 0;
+  color: #7a837b;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .price-row {
   display: flex;
   align-items: center;
@@ -836,6 +844,29 @@ a {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+}
+
+.quantity-picker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quantity-picker input {
+  width: 72px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: right;
 }
 
 .comment-button,

@@ -48,6 +48,10 @@ public class ReservationService {
 
     @Transactional
     protected ReservationResponse createReservationInternal(Long buyerId, Long productId, int quantity) {
+        if (quantity < 1) {
+            throw new RuntimeException("예약 수량은 1개 이상이어야 합니다.");
+        }
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
 
@@ -61,7 +65,10 @@ public class ReservationService {
 
         // 인당 구매 한도 초과 여부 확인
         int alreadyReserved = reservationRepository
-                .findByProductIdAndBuyerIdAndStatus(productId, buyerId, ReservationStatus.REQUESTED)
+                .findByProductIdAndBuyerIdAndStatusIn(
+                        productId,
+                        buyerId,
+                        List.of(ReservationStatus.REQUESTED, ReservationStatus.ACCEPTED))
                 .stream().mapToInt(Reservation::getQuantity).sum();
         if (alreadyReserved + quantity > product.getPerPersonLimit()) {
             throw new RuntimeException("인당 구매 한도(" + product.getPerPersonLimit() + "개)를 초과할 수 없습니다.");
@@ -71,6 +78,10 @@ public class ReservationService {
                 .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
         // 재고 차감 (재고 소진 시 자동 SOLD_OUT)
+        if (buyer.isPurchaseRestricted()) {
+            throw new RuntimeException("노쇼 패널티로 구매가 일시 제한된 계정입니다.");
+        }
+
         product.deductQuantity(quantity);
 
         Reservation reservation = Reservation.builder()
@@ -88,8 +99,7 @@ public class ReservationService {
                 product.getSeller(),
                 NotificationType.RESERVATION,
                 null,
-                reservation
-        );
+                reservation);
 
         return ReservationResponse.from(reservation);
     }
@@ -101,7 +111,7 @@ public class ReservationService {
                 .orElseThrow(() -> new RuntimeException("예약을 찾을 수 없습니다."));
 
         boolean isSeller = reservation.getSeller().getId().equals(userId);
-        boolean isBuyer  = reservation.getBuyer().getId().equals(userId);
+        boolean isBuyer = reservation.getBuyer().getId().equals(userId);
 
         // 구매자는 REQUESTED 상태일 때만 취소 가능
         if (isBuyer && status == ReservationStatus.CANCELED
@@ -123,16 +133,18 @@ public class ReservationService {
             if (product.getRemainingQuantity() == 0) {
                 product.updateStatus(ProductStatus.SOLD_OUT);
             }
+        } else if (status == ReservationStatus.NO_SHOW) {
+            reservation.getBuyer().addNoShowPenalty();
+            product.updateStatus(ProductStatus.SOLD_OUT);
         }
 
         // STATUS_CHANGE 알림 - 행위자의 상대방에게 전송
         User notifyTarget = isBuyer ? reservation.getSeller() : reservation.getBuyer();
         notificationService.createNotification(
                 notifyTarget,
-                NotificationType.STATUS_CHANGE,
+                status == ReservationStatus.NO_SHOW ? NotificationType.NO_SHOW : NotificationType.STATUS_CHANGE,
                 null,
-                reservation
-        );
+                reservation);
 
         return ReservationResponse.from(reservation);
     }
@@ -148,8 +160,8 @@ public class ReservationService {
 
     // 예약 내역 (status/role 필터)
     public List<ReservationResponse> getReservationHistory(Long userId,
-                                                           ReservationStatus status,
-                                                           String role) {
+            ReservationStatus status,
+            String role) {
         List<Reservation> reservations;
 
         if ("seller".equals(role)) {

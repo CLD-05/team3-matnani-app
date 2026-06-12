@@ -23,6 +23,12 @@ export const reservationStatuses = {
     buyerText: "거래가 완료되었습니다.",
     sellerText: "거래가 완료되었습니다.",
   },
+  NO_SHOW: {
+    label: "노쇼",
+    tone: "canceled",
+    buyerText: "노쇼로 처리되어 일정 기간 구매가 제한될 수 있습니다.",
+    sellerText: "노쇼 처리된 예약입니다.",
+  },
 };
 
 export const initialReservations = [

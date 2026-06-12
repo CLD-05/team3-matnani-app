@@ -128,6 +128,10 @@ export function normalizeProduct(p, fallback = {}) {
     pickupStartAt: p.pickupStartAt ?? fallback.pickupStartAt,
     pickupEndAt: p.pickupEndAt ?? fallback.pickupEndAt,
     expiresAt: p.expiresAt ?? fallback.expiresAt,
+    timeSale: Boolean(p.timeSale ?? fallback.timeSale),
+    totalQuantity: p.totalQuantity ?? fallback.totalQuantity ?? 1,
+    perPersonLimit: p.perPersonLimit ?? fallback.perPersonLimit ?? 1,
+    remainingQuantity: p.remainingQuantity ?? fallback.remainingQuantity ?? 1,
     expiresInMinutes: (p.expiresAt ?? fallback.expiresAt)
       ? Math.max(0, Math.round((new Date(p.expiresAt ?? fallback.expiresAt) - Date.now()) / 60000))
       : fallback.expiresInMinutes || 0,
@@ -167,6 +171,9 @@ export async function createProduct(payload) {
     pickupStartAt: payload.pickupStartAt,
     pickupEndAt: payload.pickupEndAt,
     expiresAt: payload.expiresAt,
+    timeSale: Boolean(payload.timeSale),
+    totalQuantity: payload.totalQuantity,
+    perPersonLimit: payload.perPersonLimit,
     imageUrls: payload.imageUrls || [payload.image].filter(Boolean),
   };
   const response = await client.post("/api/products", request);
@@ -188,6 +195,9 @@ export async function updateProduct(productId, updates) {
     pickupStartAt: updates.pickupStartAt,
     pickupEndAt: updates.pickupEndAt,
     expiresAt: updates.expiresAt,
+    timeSale: updates.timeSale,
+    totalQuantity: updates.totalQuantity,
+    perPersonLimit: updates.perPersonLimit,
     imageUrls: updates.imageUrls,
   };
   const response = await client.patch(`/api/products/${productId}`, request);

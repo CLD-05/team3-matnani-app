@@ -7,5 +7,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SecretCommentRequest {
     private Long productId;
+    private Long parentCommentId;
     private String content;
 }

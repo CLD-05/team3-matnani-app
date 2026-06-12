@@ -1,6 +1,5 @@
 package com.example.matnani.dto.request;
 
-
 import static com.example.matnani.domain.enums.Enums.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +22,7 @@ public class ProductRequest {
     private LocalDateTime pickupStartAt;
     private LocalDateTime pickupEndAt;
     private LocalDateTime expiresAt;
+    private Boolean timeSale;
     private List<String> imageUrls;
     private Integer totalQuantity;
     private Integer perPersonLimit;

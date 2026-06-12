@@ -2,6 +2,7 @@ import React from "react";
 import {
   Bell,
   ClipboardList,
+  Leaf,
   MessageSquareText,
   ShoppingBag,
   Star,
@@ -33,6 +34,18 @@ export function MyPage({ currentUser, products, reservations = [], onNavigate, o
   const soldOutCount = myProducts.filter(
     (product) => product.statusTone === "soldout" || product.status === "판매완료",
   ).length;
+  const completedPurchases = reservations.filter(
+    (reservation) =>
+      reservation.buyerName === currentUser.nickname && reservation.status === "COMPLETED",
+  );
+  const savedAmount = completedPurchases.reduce((sum, reservation) => {
+    const product = products.find((item) => String(item.id) === String(reservation.productId));
+    const quantity = reservation.quantity || 1;
+    const original = product?.originalPriceValue || 0;
+    const discounted = product?.priceValue || Math.round((reservation.finalPrice || 0) / quantity);
+    return sum + Math.max(0, (original - discounted) * quantity);
+  }, 0);
+  const ecoPoints = Math.floor(savedAmount / 100);
 
   return (
     <section className="mypage">
@@ -52,6 +65,25 @@ export function MyPage({ currentUser, products, reservations = [], onNavigate, o
       </div>
 
       <div className="mypage-stats">
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          onClick={() => onNavigate("/mypage/purchases")}
+        >
+          <strong>{savedAmount.toLocaleString()}원</strong>
+          <span>절약 금액</span>
+        </button>
+        <button
+          className="mypage-stat-btn"
+          type="button"
+          onClick={() => onNavigate("/mypage/purchases")}
+        >
+          <strong>{ecoPoints.toLocaleString()}P</strong>
+          <span>
+            <Leaf size={14} />
+            환경 포인트
+          </span>
+        </button>
         <button
           className="mypage-stat-btn"
           type="button"

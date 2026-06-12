@@ -10,6 +10,7 @@ import {
   Timer,
   UserRound,
 } from "lucide-react";
+import { createSecretComment, fetchSecretComments } from "../api/comments";
 import { fetchProduct } from "../api/products";
 import { fetchSellerReviews } from "../api/reviews";
 import { formatTimeLeft } from "../utils/time";
@@ -43,6 +44,74 @@ function formatDiscount(discount) {
   return `${Number.isFinite(numericDiscount) ? numericDiscount : 0}%`;
 }
 
+function getMinutesUntil(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 0;
+  return Math.max(0, Math.round((date.getTime() - Date.now()) / 60000));
+}
+
+function getCommentSortValue(comment) {
+  if (comment.rawCreatedAt) {
+    const time = new Date(comment.rawCreatedAt).getTime();
+    if (Number.isFinite(time)) return time;
+  }
+
+  return Number(comment.id) || 0;
+}
+
+function isSellerComment(comment, product) {
+  return Boolean(comment.isSeller) || comment.writer === "판매자" || comment.writer === product?.seller;
+}
+
+function buildCommentThreads(comments, product, isSellerView, currentNickname) {
+  const threads = [];
+  const threadById = new Map();
+  const sortedComments = [...comments].sort(
+    (a, b) => getCommentSortValue(a) - getCommentSortValue(b),
+  );
+
+  sortedComments.forEach((comment) => {
+    if (comment.parentCommentId) {
+      const targetThread = threadById.get(comment.parentCommentId);
+      if (targetThread) {
+        targetThread.replies.push({
+          id: comment.id,
+          writer: comment.writer,
+          writerId: comment.writerId,
+          content: comment.content,
+          createdAt: comment.createdAt,
+        });
+      }
+      return;
+    }
+
+    if (isSellerComment(comment, product)) {
+      const targetThread = threads[threads.length - 1];
+      if (targetThread) {
+        targetThread.replies.push({
+          id: comment.id,
+          writer: comment.writer,
+          writerId: comment.writerId,
+          content: comment.content,
+          createdAt: comment.createdAt,
+        });
+      }
+      return;
+    }
+
+    const thread = {
+      ...comment,
+      replies: Array.isArray(comment.replies) ? [...comment.replies] : [],
+    };
+    threads.push(thread);
+    threadById.set(comment.id, thread);
+  });
+
+  return threads
+    .filter((comment) => isSellerView || comment.writerId === currentNickname)
+    .reverse();
+}
+
 export function ProductDetailPage({
   productId,
   product: initialProduct,
@@ -59,23 +128,47 @@ export function ProductDetailPage({
   const [activeReplyCommentId, setActiveReplyCommentId] = useState(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState(() => loadSavedComments(productId));
+  const [reserveQuantity, setReserveQuantity] = useState(1);
+  const [myReservedQuantity, setMyReservedQuantity] = useState(0);
+  const [nowTick, setNowTick] = useState(Date.now());
 
   // URL의 ID로 항상 최신 상품 데이터를 가져옴
   useEffect(() => {
     if (!productId) return;
     fetchProduct(productId)
-      .then(setProduct)
+      .then((fetchedProduct) =>
+        setProduct((prev) => ({
+          ...fetchedProduct,
+          reservedQuantity: prev?.reservedQuantity ?? initialProduct?.reservedQuantity ?? 0,
+          completedQuantity: prev?.completedQuantity ?? initialProduct?.completedQuantity ?? 0,
+        })),
+      )
       .catch(() => { });
-  }, [productId]);
+  }, [initialProduct?.completedQuantity, initialProduct?.reservedQuantity, productId]);
+
+  useEffect(() => {
+    if (initialProduct) {
+      setProduct((prev) => ({ ...prev, ...initialProduct }));
+    }
+  }, [initialProduct]);
 
   useEffect(() => {
     setComments(loadSavedComments(productId));
-  }, [productId]);
+    if (!currentUser || !productId) return;
+    fetchSecretComments(productId)
+      .then(setComments)
+      .catch(() => { });
+  }, [currentUser, productId]);
 
   useEffect(() => {
     if (!productId) return;
     localStorage.setItem(getCommentsStorageKey(productId), JSON.stringify(comments));
   }, [comments, productId]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowTick(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // 판매자 전체 후기/별점 가져오기
   useEffect(() => {
@@ -100,6 +193,20 @@ export function ProductDetailPage({
   const isReserved = product.statusTone === "reserved" || product.status === "예약중";
   const isSoldOut = product.statusTone === "soldout" || product.status === "판매완료";
   const isSeller = currentUser?.nickname === product.seller;
+  const title = product.timeSale && !String(product.title || "").startsWith("[타임세일]")
+    ? `[타임세일] ${product.title}`
+    : product.title;
+  const maxReserveQuantity = Math.max(
+    1,
+    Math.min(product.remainingQuantity || 1, product.perPersonLimit || product.remainingQuantity || 1),
+  );
+  const reservedQuantity = Number(product.reservedQuantity || 0);
+  const completedQuantity = Number(product.completedQuantity || 0);
+  const statusLabel = reservedQuantity > 0 ? `${reservedQuantity}개 예약중` : product.status;
+  const statusTone = reservedQuantity > 0 ? "reserved" : product.statusTone;
+  const stockLabel = `${product.remainingQuantity || 0}개 보유중${reservedQuantity > 0 ? ` · ${reservedQuantity}개 예약중` : ""
+    }${completedQuantity > 0 ? ` · ${completedQuantity}개 판매완료` : ""}`;
+  const expiresInMinutes = product.expiresAt ? getMinutesUntil(product.expiresAt) : product.expiresInMinutes;
 
   // 판매자 전체 통계 (개별 상품 후기가 아닌 판매자 누적 후기/별점)
   const sellerReviewCount = sellerReviews.length;
@@ -109,9 +216,7 @@ export function ProductDetailPage({
       : (sellerReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / sellerReviewCount).toFixed(1);
   const canUseSecretComments = Boolean(currentUser);
   const currentNickname = currentUser?.nickname || "";
-  const visibleComments = comments.filter(
-    (comment) => isSeller || comment.writerId === currentNickname,
-  );
+  const visibleCommentThreads = buildCommentThreads(comments, product, isSeller, currentNickname);
   const defectReason = product.defectReason
     ? defectReasonLabels[product.defectReason]
     : product.title.includes("김치") || product.title.includes("빵")
@@ -129,9 +234,16 @@ export function ProductDetailPage({
     }
     if (!isOnSale) return;
     try {
-      const result = await onReserve(product.id, currentUser);
+      const result = await onReserve(product.id, currentUser, reserveQuantity);
       if (result?.productStatus) {
-        setProduct((prev) => ({ ...prev, ...result.productStatus }));
+        setProduct((prev) => ({
+          ...prev,
+          ...result.productStatus,
+          reservedQuantity: Number(prev?.reservedQuantity || 0) + Number(result.reservation?.quantity || reserveQuantity),
+        }));
+      }
+      if (result?.reservation?.quantity) {
+        setMyReservedQuantity(result.reservation.quantity);
       }
       setMessage("예약 요청이 완료되었습니다.");
     } catch (error) {
@@ -148,33 +260,42 @@ export function ProductDetailPage({
     if (!window.confirm("이 상품을 삭제할까요?")) return;
 
     await onDeleteProduct(product.id);
-    onNavigate("/market");
+    window.alert("삭제가 완료되었습니다.");
+    onNavigate("/");
   };
 
-  const handleCommentSubmit = (event) => {
+  const handleCommentSubmit = async (event) => {
     event.preventDefault();
     if (!commentInput.trim()) return;
+    const content = commentInput.trim();
     setComments((prev) => [
       {
         id: Date.now(),
         writer: currentNickname,
         writerId: currentNickname,
-        content: commentInput.trim(),
+        content,
         createdAt: "방금 전",
         replies: [],
       },
       ...prev,
     ]);
     setCommentInput("");
+    try {
+      const savedComment = await createSecretComment(product.id, content);
+      setComments((prev) => [savedComment, ...prev.filter((comment) => comment.content !== content)]);
+    } catch {
+      setMessage("댓글은 임시 저장됐지만 알림 전송에 실패했습니다.");
+    }
   };
 
-  const handleReplySubmit = (event, commentId) => {
+  const handleReplySubmit = async (event, commentId) => {
     event.preventDefault();
     const targetComment = comments.find((comment) => comment.id === commentId);
     const canReply =
       isSeller || (targetComment && targetComment.writerId === currentNickname);
 
     if (!canReply || !replyInput.trim()) return;
+    const content = replyInput.trim();
 
     setComments((prev) =>
       prev.map((comment) =>
@@ -186,7 +307,8 @@ export function ProductDetailPage({
               {
                 id: Date.now(),
                 writer: isSeller ? "판매자" : currentNickname,
-                content: replyInput.trim(),
+                writerId: currentNickname,
+                content,
                 createdAt: "방금 전",
               },
             ],
@@ -196,6 +318,11 @@ export function ProductDetailPage({
     );
     setReplyInput("");
     setActiveReplyCommentId(null);
+    try {
+      await createSecretComment(product.id, content, commentId);
+    } catch {
+      setMessage("답글은 임시 저장됐지만 알림 전송에 실패했습니다.");
+    }
   };
 
   return (
@@ -208,12 +335,12 @@ export function ProductDetailPage({
       <div className="detail-layout">
         <div className="detail-gallery">
           <img src={product.image} alt={product.title} />
-          <span className={`status-badge ${product.statusTone}`}>{product.status}</span>
+          <span className={`status-badge ${statusTone}`}>{statusLabel}</span>
         </div>
 
         <div className="detail-summary">
           <p className="seller">{product.seller}</p>
-          <h1>{product.title}</h1>
+          <h1>{title}</h1>
           <div className="detail-meta">
             <span>
               <MapPin size={16} />
@@ -225,7 +352,7 @@ export function ProductDetailPage({
             </span>
             <span>
               <Timer size={16} />
-              {formatTimeLeft(product.expiresInMinutes)}
+              {formatTimeLeft(expiresInMinutes)}
             </span>
           </div>
 
@@ -252,7 +379,11 @@ export function ProductDetailPage({
             </div>
             <div>
               <dt>유통기한</dt>
-              <dd>{formatTimeLeft(product.expiresInMinutes)} 남음</dd>
+              <dd>{formatTimeLeft(expiresInMinutes)} 남음</dd>
+            </div>
+            <div>
+              <dt>구매 제한</dt>
+              <dd>{stockLabel} · 1인 {product.perPersonLimit || 1}개</dd>
             </div>
           </dl>
 
@@ -302,14 +433,29 @@ export function ProductDetailPage({
           {message && <p className="form-success">{message}</p>}
 
           <div className="detail-actions">
+            {!isSeller && isOnSale && (
+              <label className="quantity-picker">
+                수량
+                <input
+                  type="number"
+                  min="1"
+                  max={maxReserveQuantity}
+                  value={reserveQuantity}
+                  onChange={(event) => {
+                    const next = Number(event.target.value) || 1;
+                    setReserveQuantity(Math.max(1, Math.min(maxReserveQuantity, next)));
+                  }}
+                />
+              </label>
+            )}
             <button
               className="reserve-button"
               type="button"
-              disabled={!isOnSale}
+              disabled={!isOnSale || myReservedQuantity > 0}
               onClick={handleReserve}
             >
-              {isOnSale && "예약하기"}
-              {isReserved && "예약중"}
+              {isOnSale && (myReservedQuantity > 0 ? `${myReservedQuantity}개 예약중` : "예약하기")}
+              {isReserved && `${reservedQuantity || reserveQuantity}개 예약중`}
               {isSoldOut && "판매완료"}
             </button>
           </div>
@@ -337,7 +483,7 @@ export function ProductDetailPage({
             <span>
               <MessageSquareText size={18} />
               비밀 댓글
-              <strong>{visibleComments.length}</strong>
+              <strong>{visibleCommentThreads.length}</strong>
             </span>
             <ChevronDown size={18} />
           </button>
@@ -349,7 +495,7 @@ export function ProductDetailPage({
                   <h3>비밀 댓글</h3>
                   <p>작성자 본인과 상품 판매자만 볼 수 있습니다.</p>
                 </div>
-                <span>{visibleComments.length}개</span>
+                <span>{visibleCommentThreads.length}개</span>
               </div>
               {!currentUser && (
                 <div className="secret-locked">
@@ -387,10 +533,10 @@ export function ProductDetailPage({
                     </div>
                   )}
                   <div className="comment-list">
-                    {visibleComments.length === 0 && (
+                    {visibleCommentThreads.length === 0 && (
                       <p className="comment-empty">아직 내가 남긴 비밀 문의가 없습니다.</p>
                     )}
-                    {visibleComments.map((comment) => (
+                    {visibleCommentThreads.map((comment) => (
                       <article className="comment-thread" key={comment.id}>
                         <div className="comment-item">
                           <div>

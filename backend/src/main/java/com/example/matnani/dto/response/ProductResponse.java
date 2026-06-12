@@ -26,6 +26,7 @@ public class ProductResponse {
     private LocalDateTime pickupStartAt;
     private LocalDateTime pickupEndAt;
     private LocalDateTime expiresAt;
+    private Boolean timeSale;
     private List<String> imageUrls;
     private Integer totalQuantity;
     private Integer perPersonLimit;
@@ -56,7 +57,8 @@ public class ProductResponse {
         response.sellerId = product.getSeller().getId();
         response.sellerNickname = product.getSeller().getNickname();
         response.sellerRegionName = product.getSeller().getRegion() != null
-                ? product.getSeller().getRegion().getName() : null;
+                ? product.getSeller().getRegion().getName()
+                : null;
         response.regionName = product.getRegion().getName();
         response.title = product.getTitle();
         response.description = product.getDescription();
@@ -70,6 +72,7 @@ public class ProductResponse {
         response.pickupStartAt = product.getPickupStartAt();
         response.pickupEndAt = product.getPickupEndAt();
         response.expiresAt = product.getExpiresAt();
+        response.timeSale = product.getTimeSale();
         response.imageUrls = imageUrls;
         response.totalQuantity = product.getTotalQuantity();
         response.perPersonLimit = product.getPerPersonLimit();

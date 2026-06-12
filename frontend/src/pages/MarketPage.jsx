@@ -83,6 +83,7 @@ export function MarketPage({ products, currentUser, selectedRegionLabel, onNavig
   const [sort, setSort] = useState("latest");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [hideMyProducts, setHideMyProducts] = useState(false);
+  const [showTimeSaleOnly, setShowTimeSaleOnly] = useState(false);
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
   const [regionKeyword, setRegionKeyword] = useState("");
 
@@ -121,12 +122,14 @@ export function MarketPage({ products, currentUser, selectedRegionLabel, onNavig
       const robustStatusMatched = matchesSelectedStatus(product, status);
       const myProductMatched =
         !hideMyProducts || !currentUser || product.seller !== currentUser.nickname;
+      const timeSaleMatched = !showTimeSaleOnly || product.timeSale;
       return (
         robustCategoryMatched &&
         robustRegionMatched &&
         robustStatusMatched &&
         keywordMatched &&
-        myProductMatched
+        myProductMatched &&
+        timeSaleMatched
       );
     });
 
@@ -139,7 +142,7 @@ export function MarketPage({ products, currentUser, selectedRegionLabel, onNavig
       if (sort === "rating_high") return Number(b.rating) - Number(a.rating);
       return getCreatedMinutes(a) - getCreatedMinutes(b);
     });
-  }, [category, currentUser, hideMyProducts, neighborhood, products, searchKeyword, sort, status]);
+  }, [category, currentUser, hideMyProducts, neighborhood, products, searchKeyword, showTimeSaleOnly, sort, status]);
 
   return (
     <>
@@ -231,6 +234,14 @@ export function MarketPage({ products, currentUser, selectedRegionLabel, onNavig
             <span>내가 판매중인 상품 제외</span>
           </label>
         )}
+        <label className="market-toggle-filter">
+          <input
+            type="checkbox"
+            checked={showTimeSaleOnly}
+            onChange={(event) => setShowTimeSaleOnly(event.target.checked)}
+          />
+          <span>타임특가만 보기</span>
+        </label>
       </section>
 
       <section className="content">

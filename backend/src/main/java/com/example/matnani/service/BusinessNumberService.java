@@ -44,7 +44,8 @@ public class BusinessNumberService {
         }
 
         try {
-            String url = "https://api.odcloud.kr/api/nts-businessman/v1/validate?serviceKey=" + apiKey + "&returnType=JSON";
+            String url = "https://api.odcloud.kr/api/nts-businessman/v1/validate?serviceKey=" + apiKey
+                    + "&returnType=JSON";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -54,8 +55,7 @@ public class BusinessNumberService {
                     "p_nm", ownerName,
                     "start_dt", startDate,
                     "b_nm", "",
-                    "p_nm2", ""
-            );
+                    "p_nm2", "");
             Map<String, Object> body = Map.of("businesses", List.of(businessInfo));
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 

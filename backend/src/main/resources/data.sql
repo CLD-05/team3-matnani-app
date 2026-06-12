@@ -846,3 +846,35 @@ INSERT IGNORE INTO regions (id, name, region_type, parent_id, created_at) VALUES
                                                                        (1653, '중앙동',   'DONG', 402, NOW()),
                                                                        (1654, '효돈동',   'DONG', 402, NOW()),
                                                                        (1655, '대천동',   'DONG', 402, NOW());
+
+-- Business seller demo accounts and time-sale products
+INSERT IGNORE INTO users
+    (id, email, password_hash, nickname, phone, role, region_id, no_show_count, purchase_restricted_until, created_at, updated_at)
+VALUES
+    (9001, 'test@123', '$2a$10$32yRN9ubSctzffU/I2K7M.v8esFF2AaTy9sC8tqJV2cGPnlPXvFXC', '맛난이그린마켓', '010-9001-0001', 'BUSINESS', 101, 0, NULL, NOW(), NOW()),
+    (9002, 'bakery@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '동네착한베이커리', '010-9002-0002', 'BUSINESS', 102, 0, NULL, NOW(), NOW());
+
+UPDATE users
+SET email = 'test@123',
+    password_hash = '$2a$10$32yRN9ubSctzffU/I2K7M.v8esFF2AaTy9sC8tqJV2cGPnlPXvFXC',
+    role = 'BUSINESS',
+    updated_at = NOW()
+WHERE id = 9001;
+
+INSERT IGNORE INTO business_profiles
+    (id, user_id, business_number, business_name, owner_name, verify_status, verified_at, created_at, updated_at)
+VALUES
+    (9001, 9001, '1234567890', '맛난이그린마켓', '김사업', 'VERIFIED', NOW(), NOW(), NOW()),
+    (9002, 9002, '2234567890', '동네착한베이커리', '이사업', 'VERIFIED', NOW(), NOW(), NOW());
+
+INSERT IGNORE INTO products
+    (id, seller_id, region_id, title, description, category, defect_reason, original_price, discount_price, discount_rate, status, pickup_place, pickup_start_at, pickup_end_at, expires_at, time_sale, total_quantity, per_person_limit, remaining_quantity, created_at, updated_at)
+VALUES
+    (9001, 9001, 101, '못난이 토마토 2kg', '모양은 고르지 않지만 오늘 바로 먹기 좋은 토마토입니다.', 'PRODUCE_SEAFOOD', 'SHAPE_BAD', 12000, 5900, 50.83, 'ON_SALE', '종로구청 앞', DATE_ADD(NOW(), INTERVAL 2 HOUR), DATE_ADD(NOW(), INTERVAL 5 HOUR), DATE_ADD(NOW(), INTERVAL 8 HOUR), true, 8, 2, 8, NOW(), NOW()),
+    (9002, 9002, 102, '당일 생산 크루아상 4개입', '마감 전 남은 당일 생산 베이커리입니다.', 'BAKERY_DESSERT', 'NEAR_EXPIRY', 10000, 4900, 51.00, 'ON_SALE', '을지로입구역 2번 출구', DATE_ADD(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 4 HOUR), DATE_ADD(NOW(), INTERVAL 6 HOUR), true, 6, 1, 6, NOW(), NOW());
+
+INSERT IGNORE INTO product_images
+    (product_id, image_url, sort_order)
+VALUES
+    (9001, 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=900&q=80', 0),
+    (9002, 'https://images.unsplash.com/photo-1555507036-ab794f4afe5d?auto=format&fit=crop&w=900&q=80', 0);

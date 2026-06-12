@@ -36,16 +36,30 @@ function normalizeReservation(r, fallbackProduct = null) {
     pickupTime: r.pickupTime || product?.pickupWindow || product?.pickup || fallbackProduct?.pickup || "-",
     status: r.status,
     finalPrice: r.finalPrice,
+    quantity: r.quantity || 1,
   };
 }
 
+function getProductStatus(product, remainingQuantity) {
+  if (remainingQuantity <= 0) {
+    return { status: "판매완료", statusTone: "soldout", remainingQuantity: 0 };
+  }
+
+  return { status: "판매중", statusTone: "sale", remainingQuantity };
+}
+
 // 예약 생성
-export async function createReservation({ product }) {
-  const response = await client.post(`/api/products/${product.id}/reservations`);
+export async function createReservation({ product, quantity = 1 }) {
+  const response = await client.post(`/api/products/${product.id}/reservations`, { quantity });
   const reservation = normalizeReservation(response.data.data, product);
+  const remainingQuantity = Math.max(
+    0,
+    Number(product.remainingQuantity ?? product.totalQuantity ?? 1) - Number(reservation.quantity || quantity),
+  );
+
   return {
     reservation,
-    productStatus: productStatusByReservation["REQUESTED"],
+    productStatus: getProductStatus(product, remainingQuantity),
   };
 }
 
@@ -55,12 +69,19 @@ export async function updateReservationStatus(reservation, nextStatus) {
     status: nextStatus,
   });
   const updated = normalizeReservation(response.data.data, reservation.product);
+  const productStatus = nextStatus === "CANCELED" && reservation.product
+    ? getProductStatus(
+      reservation.product,
+      Number(reservation.product.remainingQuantity ?? 0) + Number(updated.quantity || reservation.quantity || 1),
+    )
+    : null;
+
   return {
     reservationId: updated.id,
     reservation: updated,
     nextStatus,
     productId: updated.productId || reservation.productId,
-    productStatus: productStatusByReservation[nextStatus] || null,
+    productStatus,
   };
 }
 

@@ -236,6 +236,15 @@ function HistoryCard({ type, transaction, reviews, onNavigate, onUpdateReservati
   const canSellerRespond = isSales && transaction.status === "REQUESTED";
   const canSellerCancel = isSales && transaction.status === "ACCEPTED";
   const canSellerComplete = isSales && transaction.status === "ACCEPTED";
+  const canSellerNoShow = isSales && transaction.status === "ACCEPTED";
+  const quantity = Number(transaction.quantity || 1);
+  const statusLabel = ["REQUESTED", "ACCEPTED"].includes(transaction.status)
+    ? `${quantity}개 예약중`
+    : status.label;
+  const stockLabel = product
+    ? `${product.remainingQuantity ?? 0}개 보유중${product.reservedQuantity ? ` · ${product.reservedQuantity}개 예약중` : ""
+    }${product.completedQuantity ? ` · ${product.completedQuantity}개 판매완료` : ""}`
+    : "";
   const canWriteReview =
     !isSales &&
     transaction.status === "COMPLETED" &&
@@ -253,12 +262,12 @@ function HistoryCard({ type, transaction, reviews, onNavigate, onUpdateReservati
               {type === "purchases"
                 ? `${transaction.sellerName} 판매`
                 : transaction.hasReservation
-                  ? `${transaction.buyerName} 예약`
+                  ? `${transaction.buyerName} ${quantity}개 예약`
                   : "예약 대기중"}
             </p>
             <h2>{product?.title || transaction.productTitle || "삭제된 상품"}</h2>
           </div>
-          <span className={`reservation-status ${status.tone}`}>{status.label}</span>
+          <span className={`reservation-status ${status.tone}`}>{statusLabel}</span>
         </div>
 
         <div className="reservation-meta">
@@ -277,6 +286,7 @@ function HistoryCard({ type, transaction, reviews, onNavigate, onUpdateReservati
         </div>
 
         {isSales && <p className="reservation-guide">{status.sellerText}</p>}
+        {isSales && product && <p className="reservation-guide">{stockLabel}</p>}
 
         <div className="history-price-row">
           <div>
@@ -357,6 +367,15 @@ function HistoryCard({ type, transaction, reviews, onNavigate, onUpdateReservati
               onClick={() => onUpdateReservation(transaction.id, "COMPLETED")}
             >
               거래 완료
+            </button>
+          )}
+          {canSellerNoShow && (
+            <button
+              className="reservation-danger-button"
+              type="button"
+              onClick={() => onUpdateReservation(transaction.id, "NO_SHOW")}
+            >
+              노쇼 처리
             </button>
           )}
         </div>

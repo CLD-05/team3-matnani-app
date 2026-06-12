@@ -51,6 +51,30 @@ import { SellerProfilePage } from "./pages/SellerProfilePage";
 import { DEFAULT_REGION_LABEL, normalizeRegionLabel } from "./utils/regions";
 
 const authPaths = ["/login", "/signup", "/signup/business"];
+const activeReservationStatuses = new Set(["REQUESTED", "ACCEPTED"]);
+
+function withProductQuantityStats(products, reservations) {
+  return products.map((product) => {
+    const productReservations = reservations.filter(
+      (reservation) => String(reservation.productId) === String(product.id),
+    );
+    const reservedQuantity = productReservations
+      .filter((reservation) => activeReservationStatuses.has(reservation.status))
+      .reduce((sum, reservation) => sum + Number(reservation.quantity || 1), 0);
+    const completedQuantity = productReservations
+      .filter((reservation) => reservation.status === "COMPLETED")
+      .reduce((sum, reservation) => sum + Number(reservation.quantity || 1), 0);
+    const remainingQuantity = Number(product.remainingQuantity ?? product.totalQuantity ?? 1);
+
+    return {
+      ...product,
+      remainingQuantity,
+      reservedQuantity,
+      completedQuantity,
+      availableQuantity: remainingQuantity,
+    };
+  });
+}
 
 function isProtectedPath(path) {
   return (
@@ -175,13 +199,14 @@ export default function App() {
 
   const deleteProduct = async (productId) => {
     const result = await requestDeleteProduct(productId);
-    setProducts((prev) => prev.filter((product) => product.id !== result.productId));
+    const deletedProductId = result.productId ?? productId;
+    setProducts((prev) => prev.filter((product) => String(product.id) !== String(deletedProductId)));
     setReservations((prev) =>
-      prev.filter((reservation) => reservation.productId !== result.productId),
+      prev.filter((reservation) => String(reservation.productId) !== String(deletedProductId)),
     );
   };
 
-  const reserveProduct = async (productId, buyer = currentUser) => {
+  const reserveProduct = async (productId, buyer = currentUser, quantity = 1) => {
     const product = products.find((item) => item.id === productId);
 
     if (!product || !buyer) return;
@@ -195,7 +220,7 @@ export default function App() {
 
     if (alreadyRequested) return;
 
-    const result = await createReservation({ product, buyer });
+    const result = await createReservation({ product, buyer, quantity });
 
     setProducts((prev) =>
       prev.map((product) =>
@@ -315,8 +340,9 @@ export default function App() {
   const editProductMatch = path.match(/^\/products\/([^/]+)\/edit$/);
   const reviewNewMatch = path.match(/^\/reviews\/new\/([^/]+)$/);
   const sellerProfileMatch = path.match(/^\/sellers\/([^/]+)$/);
+  const productsWithQuantityStats = withProductQuantityStats(products, reservations);
   const detailProduct = detailMatch
-    ? products.find((product) => String(product.id) === detailMatch[1])
+    ? productsWithQuantityStats.find((product) => String(product.id) === detailMatch[1])
     : null;
   const editProduct = editProductMatch
     ? products.find((product) => String(product.id) === editProductMatch[1])
@@ -355,7 +381,7 @@ export default function App() {
       )}
       {path === "/market" && (
         <MarketPage
-          products={products}
+          products={productsWithQuantityStats}
           currentUser={currentUser}
           selectedRegionLabel={selectedRegionLabel}
           onNavigate={navigate}
@@ -364,7 +390,7 @@ export default function App() {
       {path === "/mypage" && (
         <MyPage
           currentUser={currentUser}
-          products={products}
+          products={productsWithQuantityStats}
           reservations={reservations}
           onNavigate={navigate}
           onNavigateToSales={navigateToSales}
@@ -373,7 +399,7 @@ export default function App() {
       {path === "/mypage/reservations" && (
         <ReservationsPage
           currentUser={currentUser}
-          products={products}
+          products={productsWithQuantityStats}
           reservations={reservations}
           onNavigate={navigate}
           onUpdateReservation={updateReservation}
@@ -383,7 +409,7 @@ export default function App() {
         <TransactionHistoryPage
           type="purchases"
           currentUser={currentUser}
-          products={products}
+          products={productsWithQuantityStats}
           reservations={reservations}
           reviews={reviews}
           onNavigate={navigate}
@@ -394,14 +420,14 @@ export default function App() {
           type="sales"
           initialFilter={salesFilter}
           currentUser={currentUser}
-          products={products}
+          products={productsWithQuantityStats}
           reservations={reservations}
           onNavigate={navigate}
           onUpdateReservation={updateReservation}
         />
       )}
       {path === "/mypage/comments" && (
-        <MyCommentsPage currentUser={currentUser} products={products} onNavigate={navigate} />
+        <MyCommentsPage currentUser={currentUser} products={productsWithQuantityStats} onNavigate={navigate} />
       )}
       {path === "/mypage/notifications" && (
         <NotificationsPage
@@ -437,7 +463,7 @@ export default function App() {
         <ReviewNewPage
           reservationId={Number(reviewNewMatch[1])}
           currentUser={currentUser}
-          products={products}
+          products={productsWithQuantityStats}
           reservations={reservations}
           reviews={reviews}
           onNavigate={navigate}
@@ -447,7 +473,7 @@ export default function App() {
       {sellerProfileMatch && (
         <SellerProfilePage
           sellerName={sellerProfileName}
-          products={products}
+          products={productsWithQuantityStats}
           onNavigate={navigate}
         />
       )}
@@ -501,7 +527,7 @@ export default function App() {
         !editProductMatch &&
         !reviewNewMatch &&
         !sellerProfileMatch && (
-          <HomePage products={products} onNavigate={navigate} />
+          <HomePage products={productsWithQuantityStats} onNavigate={navigate} />
         )}
     </main>
   );

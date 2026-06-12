@@ -50,7 +50,7 @@ public class Product {
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private ProductStatus status = ProductStatus.ON_SALE;  // SELLING → ON_SALE
+    private ProductStatus status = ProductStatus.ON_SALE; // SELLING → ON_SALE
 
     private String pickupPlace;
 
@@ -59,6 +59,10 @@ public class Product {
     private LocalDateTime pickupEndAt;
 
     private LocalDateTime expiresAt;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
+    private Boolean timeSale = false;
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
     @Builder.Default
@@ -124,9 +128,11 @@ public class Product {
         this.pickupStartAt = request.getPickupStartAt();
         this.pickupEndAt = request.getPickupEndAt();
         this.expiresAt = request.getExpiresAt();
+        this.timeSale = request.getTimeSale() != null && request.getTimeSale();
         if (request.getTotalQuantity() != null) {
             this.totalQuantity = request.getTotalQuantity();
-            this.perPersonLimit = request.getPerPersonLimit() != null ? request.getPerPersonLimit() : request.getTotalQuantity();
+            this.perPersonLimit = request.getPerPersonLimit() != null ? request.getPerPersonLimit()
+                    : request.getTotalQuantity();
         }
     }
 }

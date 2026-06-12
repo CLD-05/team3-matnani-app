@@ -91,6 +91,10 @@ function ReservationCard({ reservation, onNavigate, onUpdateReservation }) {
   const status = reservationStatuses[reservation.status];
   const product = reservation.product;
   const canBuyerCancel = reservation.status === "REQUESTED";
+  const quantity = Number(reservation.quantity || 1);
+  const statusLabel = ["REQUESTED", "ACCEPTED"].includes(reservation.status)
+    ? `${quantity}개 예약중`
+    : status.label;
 
   return (
     <article className="reservation-card">
@@ -107,7 +111,7 @@ function ReservationCard({ reservation, onNavigate, onUpdateReservation }) {
             <p className="seller">{reservation.sellerName} 판매</p>
             <h2>{product?.title || reservation.productTitle || "삭제된 상품"}</h2>
           </div>
-          <span className={`reservation-status ${status.tone}`}>{status.label}</span>
+          <span className={`reservation-status ${status.tone}`}>{statusLabel}</span>
         </div>
 
         <div className="reservation-meta">
@@ -125,7 +129,11 @@ function ReservationCard({ reservation, onNavigate, onUpdateReservation }) {
           </span>
         </div>
 
-        <p className="reservation-guide">{status.buyerText}</p>
+        <p className="reservation-guide">
+          {["REQUESTED", "ACCEPTED"].includes(reservation.status)
+            ? `${quantity}개 예약중입니다. ${status.buyerText}`
+            : status.buyerText}
+        </p>
 
         <div className="reservation-actions">
           {product && (

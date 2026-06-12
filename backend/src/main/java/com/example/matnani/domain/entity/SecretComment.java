@@ -26,6 +26,10 @@ public class SecretComment {
     @JoinColumn(name = "writer_id", nullable = false)
     private User writer;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private SecretComment parent;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
@@ -43,7 +47,6 @@ public class SecretComment {
     public void updateContent(String content) {
         this.content = content;
     }
-
 
     @PreUpdate
     protected void onUpdate() {
