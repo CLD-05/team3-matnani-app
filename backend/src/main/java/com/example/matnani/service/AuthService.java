@@ -35,6 +35,9 @@ public class AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("이미 사용 중인 이메일입니다.");
         }
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new RuntimeException("이미 사용 중인 닉네임입니다.");
+        }
 
         Region region = regionRepository.findById(request.getRegionId())
                 .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
@@ -44,7 +47,7 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
                 .phone(request.getPhone())
-                .role(UserRole.NORMAL) // 버그 수정
+                .role(UserRole.NORMAL)
                 .region(region)
                 .build();
 
@@ -56,6 +59,9 @@ public class AuthService {
     public void businessSignup(BusinessSignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("이미 사용 중인 이메일입니다.");
+        }
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new RuntimeException("이미 사용 중인 닉네임입니다.");
         }
         if (businessProfileRepository.existsByBusinessNumber(request.getBusinessNumber())) {
             throw new RuntimeException("이미 등록된 사업자번호입니다.");
