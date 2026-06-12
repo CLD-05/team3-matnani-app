@@ -1,16 +1,39 @@
-# 의존성
+# ==============================
+# Frontend (React / Vite)
+# ==============================
 node_modules/
-
-# 빌드 결과물
 dist/
 .vite/
 
-# 환경변수 (민감 정보)
+# 환경변수
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# ==============================
+# Backend (Spring Boot / Maven)
+# ==============================
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# 로컬 환경 설정 (민감정보 - 절대 커밋 금지)
+backend/src/main/resources/application-local.properties
+
+# ==============================
+# 공통
+# ==============================
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
 
 # AWS 키 파일
 *.pem
@@ -18,27 +41,14 @@ dist/
 *.p12
 *.pfx
 
-# AWS Amplify (사용 시)
-aws-exports.js
-amplify/
-
-# OS 파일
-.DS_Store
-Thumbs.db
-
 # 로그
 *.log
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# IDE / 에디터 설정
-.vscode/
-.idea/
-*.iml
+# 테스트 커버리지
+coverage/
 
 # Claude Code 로컬 설정
 .claude/
-
-# 테스트 커버리지
-coverage/
