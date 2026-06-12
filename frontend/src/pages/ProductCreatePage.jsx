@@ -148,9 +148,6 @@ export function ProductCreatePage({
     setMessage("");
   }, [defaultRegionLabel, productToEdit]);
 
-  setMessage("");
-}, [defaultRegionLabel, productToEdit]);
-
 if (currentUser?.role !== "BUSINESS") {
   return (
     <section className="detail-empty">
