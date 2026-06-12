@@ -53,4 +53,16 @@ public class MypageController {
         Long userId = Long.parseLong(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(reviewService.getMyReviews(userId)));
     }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<MypageStatsResponse>> getStats(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = Long.parseLong(userDetails.getUsername());
+        MypageStatsResponse stats = MypageStatsResponse.builder()
+                .totalSavings(reservationService.getTotalSavings(userId))
+                .rescueCount(reservationService.getRescueCount(userId))
+                .build();
+        return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
 }

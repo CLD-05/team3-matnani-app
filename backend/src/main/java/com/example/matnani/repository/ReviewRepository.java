@@ -9,9 +9,13 @@ import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     Optional<Review> findByReservationId(Long reservationId);
+
     boolean existsByReservationId(Long reservationId);
+
     List<Review> findAllByOrderByCreatedAtDesc();
+
     List<Review> findByReservation_BuyerId(Long buyerId);
+
     void deleteByReservationIdIn(List<Long> reservationIds);
 
     @Query("SELECT COUNT(r) FROM Review r WHERE r.reservation.product.id = :productId")

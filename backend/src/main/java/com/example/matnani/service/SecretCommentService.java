@@ -21,7 +21,6 @@ public class SecretCommentService {
         private final UserRepository userRepository;
         private final NotificationService notificationService;
 
-        // 댓글 작성
         @Transactional
         public SecretCommentResponse createComment(Long userId, Long productId, SecretCommentRequest request) {
                 Product product = productRepository.findById(productId)
@@ -50,16 +49,9 @@ public class SecretCommentService {
                         User target = parent.getWriter().getId().equals(userId)
                                         ? product.getSeller()
                                         : parent.getWriter();
-                        notificationService.createNotification(
-                                        target,
-                                        NotificationType.COMMENT,
-                                        product,
-                                        null);
+                        notificationService.createNotification(target, NotificationType.COMMENT, product, null);
                 } else if (!product.getSeller().getId().equals(userId)) {
-                        notificationService.createNotification(
-                                        product.getSeller(),
-                                        NotificationType.COMMENT,
-                                        product,
+                        notificationService.createNotification(product.getSeller(), NotificationType.COMMENT, product,
                                         null);
                 } else {
                         Set<Long> notifiedUserIds = secretCommentRepository.findByProductId(productId)
@@ -67,21 +59,16 @@ public class SecretCommentService {
                                         .map(c -> c.getWriter().getId())
                                         .filter(id -> !id.equals(userId))
                                         .collect(Collectors.toSet());
-
                         for (Long targetUserId : notifiedUserIds) {
                                 userRepository.findById(targetUserId)
                                                 .ifPresent(target -> notificationService.createNotification(
-                                                                target,
-                                                                NotificationType.COMMENT,
-                                                                product,
-                                                                null));
+                                                                target, NotificationType.COMMENT, product, null));
                         }
                 }
 
                 return SecretCommentResponse.from(comment);
         }
 
-        // 댓글 목록 (본인 + 판매자만)
         @Transactional(readOnly = true)
         public List<SecretCommentResponse> getComments(Long userId, Long productId) {
                 Product product = productRepository.findById(productId)
@@ -98,30 +85,24 @@ public class SecretCommentService {
                                 .collect(Collectors.toList());
         }
 
-        // 댓글 수정
         @Transactional
         public SecretCommentResponse updateComment(Long userId, Long commentId, SecretCommentRequest request) {
                 SecretComment comment = secretCommentRepository.findById(commentId)
                                 .orElseThrow(() -> new RuntimeException("댓글을 찾을 수 없습니다."));
-
                 if (!comment.getWriter().getId().equals(userId)) {
                         throw new RuntimeException("수정 권한이 없습니다.");
                 }
-
                 comment.updateContent(request.getContent());
                 return SecretCommentResponse.from(comment);
         }
 
-        // 댓글 삭제
         @Transactional
         public void deleteComment(Long userId, Long commentId) {
                 SecretComment comment = secretCommentRepository.findById(commentId)
                                 .orElseThrow(() -> new RuntimeException("댓글을 찾을 수 없습니다."));
-
                 if (!comment.getWriter().getId().equals(userId)) {
                         throw new RuntimeException("삭제 권한이 없습니다.");
                 }
-
                 secretCommentRepository.delete(comment);
         }
 }

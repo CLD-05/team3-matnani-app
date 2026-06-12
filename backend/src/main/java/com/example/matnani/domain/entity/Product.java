@@ -76,10 +76,16 @@ public class Product {
     @Builder.Default
     private Integer remainingQuantity = 1;
 
+    @Builder.Default
+    private int discountLevel = 0;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    @Builder.Default
+    private int timedDiscountRate = 0;
 
     @PrePersist
     protected void onCreate() {
@@ -94,6 +100,26 @@ public class Product {
 
     public void updateStatus(ProductStatus status) {
         this.status = status;
+    }
+
+    public void setRemainingQuantity(int quantity) {
+        this.remainingQuantity = quantity;
+    }
+
+    public void setDiscountPrice(Integer price) {
+        this.discountPrice = price;
+    }
+
+    public void setDiscountRate(BigDecimal rate) {
+        this.discountRate = rate;
+    }
+
+    public void setDiscountLevel(int level) {
+        this.discountLevel = level;
+    }
+
+    public void setTimedDiscountRate(int rate) {
+        this.timedDiscountRate = rate;
     }
 
     // 재고 차감 - 재고 소진 시 SOLD_OUT 자동 전환

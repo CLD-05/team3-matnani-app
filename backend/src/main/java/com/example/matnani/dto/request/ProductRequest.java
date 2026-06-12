@@ -26,4 +26,5 @@ public class ProductRequest {
     private List<String> imageUrls;
     private Integer totalQuantity;
     private Integer perPersonLimit;
+    private Integer timedDiscountRate;
 }

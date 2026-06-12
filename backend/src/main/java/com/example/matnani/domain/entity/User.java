@@ -1,9 +1,11 @@
-// User.java
 package com.example.matnani.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+
+import javax.swing.plaf.synth.Region;
+
 import com.example.matnani.domain.enums.Enums.*;
 
 @Entity
@@ -72,6 +74,14 @@ public class User {
         if (this.noShowCount >= 2) {
             this.purchaseRestrictedUntil = LocalDateTime.now().plusDays(7);
         }
+    }
+
+    public void setNoShowCount(int count) {
+        this.noShowCount = count;
+    }
+
+    public void setBannedUntil(LocalDateTime date) {
+        this.purchaseRestrictedUntil = date;
     }
 
 }

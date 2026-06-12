@@ -1,4 +1,3 @@
-// Reservation.java
 package com.example.matnani.domain.entity;
 
 import jakarta.persistence.*;
@@ -41,13 +40,15 @@ public class Reservation {
     private ReservationStatus status = ReservationStatus.REQUESTED;
 
     private LocalDateTime reservedAt;
-
     private LocalDateTime completedAt;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    @Builder.Default
+    private boolean pickupAlertSent = false;
 
     @PrePersist
     protected void onCreate() {
@@ -66,5 +67,18 @@ public class Reservation {
         if (newStatus == ReservationStatus.COMPLETED) {
             this.completedAt = LocalDateTime.now();
         }
+    }
+
+    // 단순 setter만
+    public void setStatus(ReservationStatus status) {
+        this.status = status;
+    }
+
+    public void setCompletedAt(LocalDateTime time) {
+        this.completedAt = time;
+    }
+
+    public void setPickupAlertSent(boolean sent) {
+        this.pickupAlertSent = sent;
     }
 }

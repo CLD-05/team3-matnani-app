@@ -25,13 +25,13 @@ public class ProductService {
     private final ReviewRepository reviewRepository;
     private final NotificationRepository notificationRepository;
     private final SecretCommentRepository secretCommentRepository;
+    private final DiscountQueueService discountQueueService;
 
     // 홈 피드 - 필터/정렬/페이징
     public List<ProductResponse> getProducts(Long regionId, ProductCategory category,
             String sort, ProductStatus status,
             int page, int size) {
         ProductStatus filterStatus = status != null ? status : ProductStatus.ON_SALE;
-
         List<Product> products = productRepository.findWithFilters(regionId, filterStatus, category);
 
         switch (sort) {
@@ -86,7 +86,7 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    // 상품 상세 - activeReservation 포함
+    // 상품 상세
     public ProductResponse getProduct(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
@@ -104,7 +104,7 @@ public class ProductService {
         return response;
     }
 
-    // 상품 등록
+    // 상품 등록 - 사업자만 가능
     @Transactional
     public ProductResponse createProduct(Long userId, ProductRequest request) {
         User seller = userRepository.findById(userId)
@@ -115,7 +115,6 @@ public class ProductService {
         Region region = regionRepository.findById(request.getRegionId())
                 .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
 
-        // discount_rate 서버에서 자동 계산
         BigDecimal discountRate = BigDecimal.valueOf(
                 (request.getOriginalPrice() - request.getDiscountPrice()) * 100.0
                         / request.getOriginalPrice())
@@ -213,17 +212,14 @@ public class ProductService {
             throw new RuntimeException("권한이 없습니다.");
         }
 
-        if (product.getStatus().equals(ProductStatus.RESERVED)) {
-            throw new RuntimeException("예약 중인 상품은 상태를 변경할 수 없습니다.");
-        }
         if (product.getStatus().equals(ProductStatus.SOLD_OUT)) {
-            throw new RuntimeException("판매 완료된 상품은 상태를 변경할 수 없습니다.");
+            throw new RuntimeException("재고 소진된 상품은 상태를 변경할 수 없습니다.");
         }
 
         product.updateStatus(status);
     }
 
-    // 상품 삭제
+    // 상품 삭제 - RESERVED 상태만 삭제 불가
     @Transactional
     public void deleteProduct(Long userId, Long productId) {
         Product product = productRepository.findById(productId)

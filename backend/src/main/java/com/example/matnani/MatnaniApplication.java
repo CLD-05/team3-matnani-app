@@ -11,5 +11,4 @@ public class MatnaniApplication {
     public static void main(String[] args) {
         SpringApplication.run(MatnaniApplication.class, args);
     }
-
 }
