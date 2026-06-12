@@ -22,6 +22,7 @@ public class ProductService {
     private final RegionRepository regionRepository;
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
+    private final DiscountQueueService discountQueueService;
 
     // 홈 피드 - 필터/정렬/페이징
     public List<ProductResponse> getProducts(Long regionId, ProductCategory category,
@@ -145,7 +146,13 @@ public class ProductService {
             }
         }
 
+        // createProduct 맨 끝 return 전에 추가
+        if (product.getPickupEndAt() != null && product.getTimedDiscountRate() > 0) {
+            discountQueueService.scheduleDiscount(product.getId(), product.getPickupEndAt());
+        }
+
         List<String> imageUrls = request.getImageUrls() != null ? request.getImageUrls() : List.of();
+
         return ProductResponse.from(product, imageUrls);
     }
 
