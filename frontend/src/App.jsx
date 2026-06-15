@@ -336,7 +336,7 @@ export default function App() {
     setNotifications([]);
   };
 
-  const detailMatch = path.match(/^\/products\/([^/]+)$/);
+  const detailMatch = path.match(/^\/products\/(\d+)$/);
   const editProductMatch = path.match(/^\/products\/([^/]+)\/edit$/);
   const reviewNewMatch = path.match(/^\/reviews\/new\/([^/]+)$/);
   const sellerProfileMatch = path.match(/^\/sellers\/([^/]+)$/);
