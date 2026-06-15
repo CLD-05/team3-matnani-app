@@ -1,0 +1,60 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### 환경변수 / 민감 정보 ###
+.env
+.env.local
+application-local.yml
+application-local.properties
+application-secret.yml
+application-secret.properties
+application-prod.yml
+application-prod.properties
+
+### AWS 키 파일 ###
+*.pem
+*.key
+*.p12
+*.pfx
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### 로그 ###
+*.log
+logs/
+
+### Claude Code 로컬 설정 ###
+.claude/
