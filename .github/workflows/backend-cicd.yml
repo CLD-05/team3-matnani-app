@@ -47,6 +47,7 @@ jobs:
 
       # mvnw 실행 권한 부여
       - name: Grant execute permission
+        working-directory: backend
         run: chmod +x mvnw
 
       - name: Configure AWS credentials (OIDC)
@@ -66,10 +67,12 @@ jobs:
 
       # 빌드 테스트
       - name: Test Build
+        working-directory: backend
         run: ./mvnw clean package
 
       # 이미지 빌드 + 푸시
       - name: Build & Push Docker image
+        working-directory: backend
         run: |
           docker build \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
