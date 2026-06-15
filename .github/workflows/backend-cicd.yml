@@ -1,6 +1,10 @@
 name: Backend CI/CD to AWS ECR
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -29,7 +33,13 @@ jobs:
 
       - name: Set Environment
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "dev" ]; then
+          if [ "${{ github.event_name }}" = "push" ]; then
+            ENV="dev"
+          else
+            ENV="${{ github.event.inputs.environment }}"
+          fi
+
+          if [ "$ENV" = "dev" ]; then
             echo "ROLE_ARN=${{ secrets.AWS_DEV_ROLE_ARN }}" >> $GITHUB_ENV
             echo "ECR_REPOSITORY=team3-matnani-dev-api" >> $GITHUB_ENV
             echo "OVERLAY=dev" >> $GITHUB_ENV
@@ -38,6 +48,7 @@ jobs:
             echo "ECR_REPOSITORY=team3-matnani-prod-api" >> $GITHUB_ENV
             echo "OVERLAY=prod" >> $GITHUB_ENV
           fi
+      
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -47,6 +58,7 @@ jobs:
 
       # mvnw 실행 권한 부여
       - name: Grant execute permission
+        working-directory: backend
         run: chmod +x mvnw
 
       - name: Configure AWS credentials (OIDC)
@@ -66,10 +78,12 @@ jobs:
 
       # 빌드 테스트
       - name: Test Build
+        working-directory: backend
         run: ./mvnw clean package
 
       # 이미지 빌드 + 푸시
       - name: Build & Push Docker image
+        working-directory: backend
         run: |
           docker build \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
