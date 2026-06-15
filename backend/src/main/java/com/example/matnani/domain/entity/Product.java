@@ -87,6 +87,12 @@ public class Product {
     @Builder.Default
     private int timedDiscountRate = 0;
 
+    @Builder.Default
+    private int timedDiscountRate1 = 0;
+
+    @Builder.Default
+    private int timedDiscountRate2 = 0;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -118,8 +124,12 @@ public class Product {
         this.discountLevel = level;
     }
 
-    public void setTimedDiscountRate(int rate) {
-        this.timedDiscountRate = rate;
+    public void setTimedDiscountRate1(int rate) {
+        this.timedDiscountRate1 = rate;
+    }
+
+    public void setTimedDiscountRate2(int rate) {
+        this.timedDiscountRate2 = rate;
     }
 
     // 재고 차감 - 재고 소진 시 SOLD_OUT 자동 전환
@@ -148,8 +158,6 @@ public class Product {
         this.category = request.getCategory();
         this.defectReason = request.getDefectReason();
         this.originalPrice = request.getOriginalPrice();
-        this.discountPrice = request.getDiscountPrice();
-        this.discountRate = request.getDiscountRate();
         this.pickupPlace = request.getPickupPlace();
         this.pickupStartAt = request.getPickupStartAt();
         this.pickupEndAt = request.getPickupEndAt();
@@ -159,6 +167,12 @@ public class Product {
             this.totalQuantity = request.getTotalQuantity();
             this.perPersonLimit = request.getPerPersonLimit() != null ? request.getPerPersonLimit()
                     : request.getTotalQuantity();
+        }
+        if (request.getTimedDiscountRate1() != null) {
+            this.timedDiscountRate1 = request.getTimedDiscountRate1();
+        }
+        if (request.getTimedDiscountRate2() != null) {
+            this.timedDiscountRate2 = request.getTimedDiscountRate2();
         }
     }
 }

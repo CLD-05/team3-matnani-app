@@ -57,26 +57,34 @@ public class DiscountQueueService {
             int targetLevel = Integer.parseInt(parts[1]);
 
             productRepository.findById(productId).ifPresent(product -> {
+                int rate = targetLevel == 1 ? product.getTimedDiscountRate1() : product.getTimedDiscountRate2();
                 if (product.getDiscountLevel() < targetLevel
-                        && product.getTimedDiscountRate() > 0
+                        && rate > 0
                         && product.getStatus().name().equals("ON_SALE")) {
-                    applyDiscount(product);
-                    log.info("할인 적용 - 상품: {}, {}차 할인, 할인가: {}원",
-                            product.getTitle(), targetLevel, product.getDiscountPrice());
+                    applyDiscount(product, targetLevel, rate);
+                    log.info("할인 적용 - 상품: {}, {}차 할인 ({}%), 할인가: {}원",
+                            product.getTitle(), targetLevel, rate, product.getDiscountPrice());
                 }
             });
         }
     }
 
-    private void applyDiscount(Product product) {
-        double rate = 1.0 - (product.getTimedDiscountRate() / 100.0);
-        int newPrice = (int) (product.getDiscountPrice() * rate);
+    private void applyDiscount(Product product, int level, int rate) {
+        // 기본 할인가(discountPrice) 기준으로 각 차수 할인율 적용
+        // 1차, 2차 모두 등록 시점의 기본 할인가 기준
+        // → 2차 적용 시 1차로 이미 바뀐 가격에서 역산하여 원래 기본 할인가 복원
+        int basePrice = product.getDiscountPrice();
+        if (level == 2 && product.getTimedDiscountRate1() > 0) {
+            double prevRate = 1.0 - (product.getTimedDiscountRate1() / 100.0);
+            basePrice = (int) Math.round(product.getDiscountPrice() / prevRate);
+        }
+        int newPrice = (int) Math.round(basePrice * (1.0 - (rate / 100.0)));
         BigDecimal newRate = BigDecimal.valueOf(
                 (product.getOriginalPrice() - newPrice) * 100.0 / product.getOriginalPrice()
         ).setScale(2, RoundingMode.HALF_UP);
 
         product.setDiscountPrice(newPrice);
         product.setDiscountRate(newRate);
-        product.setDiscountLevel(product.getDiscountLevel() + 1);
+        product.setDiscountLevel(level);
     }
 }

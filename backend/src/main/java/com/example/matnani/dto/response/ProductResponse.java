@@ -35,7 +35,8 @@ public class ProductResponse {
     private ActiveReservationDto activeReservation;
     private long reviewCount;
     private double averageRating;
-    private int timedDiscountRate;
+    private int timedDiscountRate1;
+    private int timedDiscountRate2;
     private int discountLevel;
 
     public static ProductResponse from(Product product, List<String> imageUrls) {
@@ -65,7 +66,8 @@ public class ProductResponse {
         response.perPersonLimit = product.getPerPersonLimit();
         response.remainingQuantity = product.getRemainingQuantity();
         response.createdAt = product.getCreatedAt();
-        response.timedDiscountRate = product.getTimedDiscountRate();
+        response.timedDiscountRate1 = product.getTimedDiscountRate1();
+        response.timedDiscountRate2 = product.getTimedDiscountRate2();
         response.discountLevel = product.getDiscountLevel();
         return response;
     }

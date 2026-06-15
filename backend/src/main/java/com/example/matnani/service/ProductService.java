@@ -29,8 +29,8 @@ public class ProductService {
 
     // 홈 피드 - 필터/정렬/페이징
     public List<ProductResponse> getProducts(Long regionId, ProductCategory category,
-            String sort, ProductStatus status,
-            int page, int size) {
+                                             String sort, ProductStatus status,
+                                             int page, int size) {
         ProductStatus filterStatus = status != null ? status : ProductStatus.ON_SALE;
         List<Product> products = productRepository.findWithFilters(regionId, filterStatus, category);
 
@@ -95,7 +95,7 @@ public class ProductService {
 
         if (product.getStatus() == ProductStatus.RESERVED) {
             reservationRepository.findByProductIdAndStatusIn(
-                    productId, List.of(ReservationStatus.REQUESTED, ReservationStatus.ACCEPTED))
+                            productId, List.of(ReservationStatus.REQUESTED, ReservationStatus.ACCEPTED))
                     .ifPresent(r -> response.setActiveReservation(
                             ProductResponse.ActiveReservationDto.of(
                                     r.getId(), r.getStatus(), r.getBuyer().getId())));
@@ -115,10 +115,11 @@ public class ProductService {
         Region region = regionRepository.findById(request.getRegionId())
                 .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
 
-        BigDecimal discountRate = BigDecimal.valueOf(
-                (request.getOriginalPrice() - request.getDiscountPrice()) * 100.0
-                        / request.getOriginalPrice())
-                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal discountRate = request.getDiscountRate() != null
+                ? request.getDiscountRate().setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        int calculatedDiscountPrice = (int) Math.round(
+                request.getOriginalPrice() * (1 - discountRate.doubleValue() / 100));
 
         int totalQty = request.getTotalQuantity() != null ? request.getTotalQuantity() : 1;
         int perPersonLmt = request.getPerPersonLimit() != null ? request.getPerPersonLimit() : totalQty;
@@ -137,7 +138,7 @@ public class ProductService {
                 .category(request.getCategory())
                 .defectReason(request.getDefectReason())
                 .originalPrice(request.getOriginalPrice())
-                .discountPrice(request.getDiscountPrice())
+                .discountPrice(calculatedDiscountPrice)
                 .discountRate(discountRate)
                 .pickupPlace(request.getPickupPlace())
                 .pickupStartAt(request.getPickupStartAt())
@@ -147,9 +148,17 @@ public class ProductService {
                 .totalQuantity(totalQty)
                 .perPersonLimit(perPersonLmt)
                 .remainingQuantity(totalQty)
+                .timedDiscountRate1(request.getTimedDiscountRate1() != null ? request.getTimedDiscountRate1() : 0)
+                .timedDiscountRate2(request.getTimedDiscountRate2() != null ? request.getTimedDiscountRate2() : 0)
                 .build();
 
         productRepository.save(product);
+
+        if (request.getPickupEndAt() != null
+                && (request.getTimedDiscountRate1() != null && request.getTimedDiscountRate1() > 0
+                || request.getTimedDiscountRate2() != null && request.getTimedDiscountRate2() > 0)) {
+            discountQueueService.scheduleDiscount(product.getId(), request.getPickupEndAt());
+        }
 
         if (request.getImageUrls() != null) {
             for (int i = 0; i < request.getImageUrls().size(); i++) {
@@ -174,11 +183,20 @@ public class ProductService {
         if (!product.getSeller().getId().equals(userId)) {
             throw new RuntimeException("수정 권한이 없습니다.");
         }
+        Region region = request.getRegionId() != null
+                ? regionRepository.findById(request.getRegionId())
+                .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."))
+                : product.getRegion();
 
-        Region region = regionRepository.findById(request.getRegionId())
-                .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
+        BigDecimal updateDiscountRate = request.getDiscountRate() != null
+                ? request.getDiscountRate().setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        int updateDiscountPrice = (int) Math.round(
+                request.getOriginalPrice() * (1 - updateDiscountRate.doubleValue() / 100));
 
         product.update(request, region);
+        product.setDiscountPrice(updateDiscountPrice);
+        product.setDiscountRate(updateDiscountRate);
         return buildResponse(product);
     }
 
