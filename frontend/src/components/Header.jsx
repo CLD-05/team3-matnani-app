@@ -1,12 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Bell, ChevronDown, Leaf, MapPin, Menu, ShoppingBasket, UserRound } from "lucide-react";
 import { RegionSearchPanel } from "./RegionSearchPanel";
-import { filterRegions, getRegionDong, normalizeRegionLabel } from "../utils/regions";
 
 export function Header({
   path,
   currentUser,
-  selectedRegionLabel,
+  selectedRegion,
   unreadNotificationCount,
   onNavigate,
   onLogout,
@@ -18,16 +17,12 @@ export function Header({
     { label: "상품 등록", path: "/products/new", businessOnly: true },
   ];
   const [regionPickerOpen, setRegionPickerOpen] = useState(false);
-  const [regionKeyword, setRegionKeyword] = useState("");
   const unreadCount = currentUser ? unreadNotificationCount : 0;
-  const currentRegionLabel = normalizeRegionLabel(selectedRegionLabel || currentUser?.region);
-  const currentDong = getRegionDong(currentRegionLabel);
-  const regionResults = useMemo(() => filterRegions(regionKeyword), [regionKeyword]);
+  const displayName = selectedRegion?.name || "전체";
 
-  const handleRegionSelect = (regionLabel) => {
-    onRegionChange(normalizeRegionLabel(regionLabel));
+  const handleRegionSelect = (region) => {
+    onRegionChange(region);
     setRegionPickerOpen(false);
-    setRegionKeyword("");
   };
 
   return (
@@ -73,7 +68,7 @@ export function Header({
             onClick={() => setRegionPickerOpen((prev) => !prev)}
           >
             <MapPin size={18} />
-            {currentDong}
+            {displayName}
             <ChevronDown size={16} />
           </button>
           {regionPickerOpen && (
@@ -85,9 +80,7 @@ export function Header({
                 </button>
               </div>
               <RegionSearchPanel
-                keyword={regionKeyword}
-                results={regionResults}
-                onKeywordChange={setRegionKeyword}
+                includeAll
                 onSelect={handleRegionSelect}
               />
             </div>

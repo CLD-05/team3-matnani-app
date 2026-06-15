@@ -1,5 +1,4 @@
 import client from "./client";
-import { normalizeRegionLabel } from "../utils/regions";
 
 export function getSavedUser() {
   try {
@@ -12,18 +11,14 @@ export function getSavedUser() {
   }
 }
 
-export async function loginUser({ email, password, region }) {
+export async function loginUser({ email, password }) {
   const response = await client.post("/api/auth/login", { email, password });
-  const { accessToken, nickname, role, regionName } = response.data.data;
-  const normalizedRegion = regionName || region ? normalizeRegionLabel(regionName || region) : undefined;
+  const { accessToken, nickname, role } = response.data.data;
 
   localStorage.setItem("matnaniToken", accessToken);
-  localStorage.setItem(
-    "matnaniUser",
-    JSON.stringify({ email, nickname, role, ...(normalizedRegion ? { region: normalizedRegion } : {}) }),
-  );
+  localStorage.setItem("matnaniUser", JSON.stringify({ email, nickname, role }));
 
-  return { email, nickname, role, region: normalizedRegion };
+  return { email, nickname, role };
 }
 
 export async function signupUser({ email, password, nickname, phone, regionId }) {

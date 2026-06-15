@@ -3,7 +3,6 @@ import { Search } from "lucide-react";
 import {
   categories,
   productStatuses,
-  regionOptions,
   sortOptions,
 } from "../data/constants";
 import { FilterGroup } from "../components/FilterGroup";
@@ -15,28 +14,16 @@ function isAllOption(value) {
   return value === categories[0] || value === productStatuses[0];
 }
 
-function getRegionDong(value) {
-  const matchedRegion = regionOptions.find(
-    (region) => region.label === value || region.dong === value,
-  );
-  return matchedRegion?.dong || value;
-}
-
 function matchesSelectedRegion(product, selectedRegion) {
-  if (isAllOption(selectedRegion)) return true;
+  if (!selectedRegion || selectedRegion.id === null) return true;
 
-  const selectedDong = getRegionDong(selectedRegion);
+  if (product.regionId && selectedRegion.id) {
+    return String(product.regionId) === String(selectedRegion.id);
+  }
+
+  const name = selectedRegion.name;
   const productRegions = [product.region, product.regionName, product.regionLabel].filter(Boolean);
-
-  return productRegions.some((region) => {
-    const regionDong = getRegionDong(region);
-    return (
-      region === selectedRegion ||
-      region === selectedDong ||
-      regionDong === selectedDong ||
-      String(region).includes(selectedDong)
-    );
-  });
+  return productRegions.some((r) => r === name || String(r).includes(name));
 }
 
 function matchesSelectedStatus(product, selectedStatus) {
@@ -76,36 +63,26 @@ function getCreatedMinutes(product) {
   return getNumericValue(product.createdMinutes);
 }
 
-export function MarketPage({ products, currentUser, selectedRegionLabel, onNavigate }) {
+export function MarketPage({ products, currentUser, selectedRegion, onNavigate }) {
   const [category, setCategory] = useState("전체");
-  const [neighborhood, setNeighborhood] = useState(selectedRegionLabel || "전체");
+  const [neighborhood, setNeighborhood] = useState(selectedRegion || null);
   const [status, setStatus] = useState("전체");
   const [sort, setSort] = useState("latest");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [hideMyProducts, setHideMyProducts] = useState(false);
   const [showTimeSaleOnly, setShowTimeSaleOnly] = useState(false);
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
-  const [regionKeyword, setRegionKeyword] = useState("");
-
-  const regionResults = regionOptions.filter((region) => {
-    const keyword = regionKeyword.trim();
-    if (!keyword) return true;
-    return region.label.includes(keyword) || region.dong.includes(keyword);
-  });
 
   useEffect(() => {
-    if (selectedRegionLabel) {
-      setNeighborhood(selectedRegionLabel);
-    }
-  }, [selectedRegionLabel]);
+    setNeighborhood(selectedRegion || null);
+  }, [selectedRegion]);
 
   const filteredProducts = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
     const filtered = products.filter((product) => {
-      const categoryMatched = category === "전체" || product.category === category;
-      const selectedDong = regionOptions.find((region) => region.label === neighborhood)?.dong;
-      const regionMatched = neighborhood === "전체" || product.region === selectedDong;
-      const statusMatched = status === "전체" || product.status === status;
+      const robustCategoryMatched = isAllOption(category) || product.category === category;
+      const robustRegionMatched = matchesSelectedRegion(product, neighborhood);
+      const robustStatusMatched = matchesSelectedStatus(product, status);
       const searchableText = [
         product.title,
         product.seller,
@@ -117,9 +94,6 @@ export function MarketPage({ products, currentUser, selectedRegionLabel, onNavig
         .join(" ")
         .toLowerCase();
       const keywordMatched = !keyword || searchableText.includes(keyword);
-      const robustCategoryMatched = isAllOption(category) || product.category === category;
-      const robustRegionMatched = matchesSelectedRegion(product, neighborhood);
-      const robustStatusMatched = matchesSelectedStatus(product, status);
       const myProductMatched =
         !hideMyProducts || !currentUser || product.seller !== currentUser.nickname;
       const timeSaleMatched = !showTimeSaleOnly || product.timeSale;
@@ -143,6 +117,10 @@ export function MarketPage({ products, currentUser, selectedRegionLabel, onNavig
       return getCreatedMinutes(a) - getCreatedMinutes(b);
     });
   }, [category, currentUser, hideMyProducts, neighborhood, products, searchKeyword, showTimeSaleOnly, sort, status]);
+
+  const neighborhoodLabel = neighborhood?.id === null
+    ? "전체"
+    : neighborhood?.label || "전체";
 
   return (
     <>
@@ -183,17 +161,14 @@ export function MarketPage({ products, currentUser, selectedRegionLabel, onNavig
               type="button"
               onClick={() => setRegionSearchOpen((prev) => !prev)}
             >
-              {neighborhood === "전체" ? "지역 검색" : neighborhood}
+              {neighborhoodLabel === "전체" ? "지역 검색" : neighborhoodLabel}
             </button>
           </div>
           {regionSearchOpen && (
             <RegionSearchPanel
-              keyword={regionKeyword}
-              results={regionResults}
               includeAll
-              onKeywordChange={setRegionKeyword}
-              onSelect={(regionLabel) => {
-                setNeighborhood(regionLabel);
+              onSelect={(region) => {
+                setNeighborhood(region);
                 setRegionSearchOpen(false);
               }}
             />

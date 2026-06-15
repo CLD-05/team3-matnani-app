@@ -1,12 +1,6 @@
 import React, { useState } from "react";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
 import client from "../api/client";
-import {
-  DEFAULT_REGION_LABEL,
-  filterRegions,
-  getRegionId,
-  normalizeRegionLabel,
-} from "../utils/regions";
 
 export function SignupPage({ onNavigate, onLogin }) {
   const [form, setForm] = useState({
@@ -14,14 +8,11 @@ export function SignupPage({ onNavigate, onLogin }) {
     password: "",
     nickname: "",
     phone: "",
-    region: DEFAULT_REGION_LABEL,
   });
+  const [selectedRegion, setSelectedRegion] = useState(null);
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
-  const [regionKeyword, setRegionKeyword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const regionResults = filterRegions(regionKeyword);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -41,12 +32,11 @@ export function SignupPage({ onNavigate, onLogin }) {
         password: form.password,
         nickname: form.nickname,
         phone: form.phone || null,
-        regionId: getRegionId(form.region),
+        regionId: selectedRegion?.id || null,
       });
       await onLogin({
         email: form.email,
         password: form.password,
-        region: normalizeRegionLabel(form.region),
       });
     } catch (error) {
       const msg = error.response?.data?.message;
@@ -110,16 +100,13 @@ export function SignupPage({ onNavigate, onLogin }) {
               type="button"
               onClick={() => setRegionSearchOpen((prev) => !prev)}
             >
-              {form.region}
+              {selectedRegion?.label || "동네를 선택하세요"}
             </button>
           </div>
           {regionSearchOpen && (
             <RegionSearchPanel
-              keyword={regionKeyword}
-              results={regionResults}
-              onKeywordChange={setRegionKeyword}
-              onSelect={(regionLabel) => {
-                updateForm("region", normalizeRegionLabel(regionLabel));
+              onSelect={(region) => {
+                setSelectedRegion(region);
                 setRegionSearchOpen(false);
               }}
             />

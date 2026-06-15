@@ -1,11 +1,5 @@
 import React, { useState } from "react";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
-import {
-  DEFAULT_REGION_LABEL,
-  filterRegions,
-  normalizeRegionLabel,
-  getRegionId,
-} from "../utils/regions";
 import { businessSignupUser } from "../api/auth";
 
 export function BusinessSignupPage({ onNavigate, onLogin }) {
@@ -18,14 +12,11 @@ export function BusinessSignupPage({ onNavigate, onLogin }) {
     businessName: "",
     ownerName: "",
     startDate: "",
-    region: DEFAULT_REGION_LABEL,
   });
+  const [selectedRegion, setSelectedRegion] = useState(null);
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
-  const [regionKeyword, setRegionKeyword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const regionResults = filterRegions(regionKeyword);
 
   const updateForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -52,7 +43,7 @@ export function BusinessSignupPage({ onNavigate, onLogin }) {
         password: form.password,
         nickname: form.nickname,
         phone: form.phone,
-        regionId: getRegionId(form.region),
+        regionId: selectedRegion?.id || null,
         businessNumber: form.businessNumber,
         businessName: form.businessName,
         ownerName: form.ownerName,
@@ -165,16 +156,13 @@ export function BusinessSignupPage({ onNavigate, onLogin }) {
               type="button"
               onClick={() => setRegionSearchOpen((prev) => !prev)}
             >
-              {form.region}
+              {selectedRegion?.label || "동네를 선택하세요"}
             </button>
           </div>
           {regionSearchOpen && (
             <RegionSearchPanel
-              keyword={regionKeyword}
-              results={regionResults}
-              onKeywordChange={setRegionKeyword}
-              onSelect={(regionLabel) => {
-                updateForm("region", normalizeRegionLabel(regionLabel));
+              onSelect={(region) => {
+                setSelectedRegion(region);
                 setRegionSearchOpen(false);
               }}
             />

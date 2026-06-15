@@ -1,10 +1,4 @@
 import client from "./client";
-import {
-  getRegionDong,
-  getRegionId,
-  getRegionLabelById,
-  normalizeRegionLabel,
-} from "../utils/regions";
 
 // ─── 상수 매핑 ───────────────────────────────────────────────
 
@@ -56,11 +50,9 @@ function rememberProductRegion(productId, regionLabel) {
 
   try {
     const overrides = loadProductRegionOverrides();
-    overrides[String(productId)] = normalizeRegionLabel(regionLabel);
+    overrides[String(productId)] = regionLabel;
     localStorage.setItem(PRODUCT_REGION_OVERRIDES_KEY, JSON.stringify(overrides));
-  } catch {
-    // localStorage가 막힌 환경에서는 API 응답 값만 사용합니다.
-  }
+  } catch {}
 }
 
 function formatPrice(value) {
@@ -82,17 +74,15 @@ function formatPickup(startAt, endAt) {
 export function normalizeProduct(p, fallback = {}) {
   const productId = p.id ?? fallback.id;
   const savedRegionLabel = getProductRegionOverride(productId);
-  const regionLabel = normalizeRegionLabel(
+  const regionLabel =
     savedRegionLabel ||
-    fallback.regionName ||
-    fallback.regionLabel ||
-    fallback.region ||
     p.regionName ||
     p.regionLabel ||
     p.region ||
-    (p.regionId ? getRegionLabelById(p.regionId) : "") ||
-    (fallback.regionId ? getRegionLabelById(fallback.regionId) : ""),
-  );
+    fallback.regionName ||
+    fallback.regionLabel ||
+    fallback.region ||
+    "";
 
   return {
     id: productId,
@@ -120,7 +110,8 @@ export function normalizeProduct(p, fallback = {}) {
     imageUrls: p.imageUrls || fallback.imageUrls || [],
     status: STATUS_LABEL[p.status] || p.status || fallback.status,
     statusTone: STATUS_TONE[p.status] || fallback.statusTone || "sale",
-    region: getRegionDong(regionLabel),
+    regionId: p.regionId ?? fallback.regionId ?? null,
+    region: regionLabel,
     regionLabel,
     regionName: regionLabel,
     pickup: p.pickup || fallback.pickup || formatPickup(p.pickupStartAt, p.pickupEndAt),
@@ -157,7 +148,7 @@ export async function fetchProduct(id) {
 
 export async function createProduct(payload) {
   const request = {
-    regionId: getRegionId(payload.regionLabel),
+    regionId: payload.regionId,
     title: payload.title,
     description: payload.description,
     category: CATEGORY_TO_ENUM[payload.category] || "ETC",
@@ -177,14 +168,14 @@ export async function createProduct(payload) {
     imageUrls: payload.imageUrls || [payload.image].filter(Boolean),
   };
   const response = await client.post("/api/products", request);
-  const createdProduct = normalizeProduct(response.data.data || {}, { ...payload, regionId: request.regionId });
+  const createdProduct = normalizeProduct(response.data.data || {}, payload);
   rememberProductRegion(createdProduct.id, payload.regionLabel);
-  return { ...createdProduct, regionLabel: normalizeRegionLabel(payload.regionLabel), regionName: normalizeRegionLabel(payload.regionLabel), region: getRegionDong(payload.regionLabel) };
+  return createdProduct;
 }
 
 export async function updateProduct(productId, updates) {
   const request = {
-    regionId: updates.regionLabel ? getRegionId(updates.regionLabel) : undefined,
+    regionId: updates.regionId ?? undefined,
     title: updates.title,
     description: updates.description,
     category: updates.category ? (CATEGORY_TO_ENUM[updates.category] || "ETC") : undefined,
@@ -201,12 +192,9 @@ export async function updateProduct(productId, updates) {
     imageUrls: updates.imageUrls,
   };
   const response = await client.patch(`/api/products/${productId}`, request);
-  const normalizedUpdates = normalizeProduct(response.data.data || {}, { ...updates, id: productId, regionId: request.regionId });
+  const normalizedUpdates = normalizeProduct(response.data.data || {}, { ...updates, id: productId });
   if (updates.regionLabel) {
     rememberProductRegion(productId, updates.regionLabel);
-    normalizedUpdates.regionLabel = normalizeRegionLabel(updates.regionLabel);
-    normalizedUpdates.regionName = normalizeRegionLabel(updates.regionLabel);
-    normalizedUpdates.region = getRegionDong(updates.regionLabel);
   }
 
   return {

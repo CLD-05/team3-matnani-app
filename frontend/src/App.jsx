@@ -48,7 +48,7 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { MyReviewsPage } from "./pages/MyReviewsPage";
 import { ReceivedReviewsPage } from "./pages/ReceivedReviewsPage";
 import { SellerProfilePage } from "./pages/SellerProfilePage";
-import { DEFAULT_REGION_LABEL, normalizeRegionLabel } from "./utils/regions";
+import { getSavedRegion, saveRegion } from "./utils/regions";
 
 const authPaths = ["/login", "/signup", "/signup/business"];
 const activeReservationStatuses = new Set(["REQUESTED", "ACCEPTED"]);
@@ -95,9 +95,7 @@ export default function App() {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [salesFilter, setSalesFilter] = useState("all");
   const [currentUser, setCurrentUser] = useState(getSavedUser);
-  const [selectedRegionLabel, setSelectedRegionLabel] = useState(() =>
-    normalizeRegionLabel(getSavedUser()?.region || DEFAULT_REGION_LABEL),
-  );
+  const [selectedRegion, setSelectedRegion] = useState(() => getSavedRegion());
 
   // 앱 시작 시 상품 목록 불러오기
   useEffect(() => {
@@ -161,12 +159,14 @@ export default function App() {
     navigate("/mypage/sales");
   };
 
+  const handleRegionChange = (region) => {
+    setSelectedRegion(region);
+    saveRegion(region);
+  };
+
   const login = async (user) => {
     const loggedInUser = await loginUser(user);
     setCurrentUser(loggedInUser);
-    if (loggedInUser.region || user.region) {
-      setSelectedRegionLabel(normalizeRegionLabel(loggedInUser.region || user.region));
-    }
     navigate("/");
   };
 
@@ -360,11 +360,11 @@ export default function App() {
       <Header
         path={path}
         currentUser={currentUser}
-        selectedRegionLabel={selectedRegionLabel}
+        selectedRegion={selectedRegion}
         unreadNotificationCount={unreadNotificationCount}
         onNavigate={navigate}
         onLogout={logout}
-        onRegionChange={setSelectedRegionLabel}
+        onRegionChange={handleRegionChange}
       />
       {appMessage && (
         <div className="app-message" role="status" aria-live="polite">
@@ -383,7 +383,7 @@ export default function App() {
         <MarketPage
           products={productsWithQuantityStats}
           currentUser={currentUser}
-          selectedRegionLabel={selectedRegionLabel}
+          selectedRegion={selectedRegion}
           onNavigate={navigate}
         />
       )}
@@ -480,7 +480,7 @@ export default function App() {
       {path === "/products/new" && (
         <ProductCreatePage
           currentUser={currentUser}
-          selectedRegionLabel={selectedRegionLabel}
+          selectedRegion={selectedRegion}
           onAddProduct={addProduct}
           onNavigate={navigate}
         />
@@ -488,7 +488,7 @@ export default function App() {
       {editProductMatch && canEditProduct && (
         <ProductCreatePage
           currentUser={currentUser}
-          selectedRegionLabel={selectedRegionLabel}
+          selectedRegion={selectedRegion}
           productToEdit={editProduct}
           onAddProduct={addProduct}
           onUpdateProduct={updateProduct}
@@ -527,7 +527,7 @@ export default function App() {
         !editProductMatch &&
         !reviewNewMatch &&
         !sellerProfileMatch && (
-          <HomePage products={productsWithQuantityStats} onNavigate={navigate} />
+          <HomePage products={productsWithQuantityStats} selectedRegion={selectedRegion} onNavigate={navigate} />
         )}
     </main>
   );

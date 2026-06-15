@@ -1,14 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { ImagePlus, Upload } from "lucide-react";
-import { categories, regionOptions } from "../data/constants";
+import { categories } from "../data/constants";
 import { PageIntro } from "../components/PageIntro";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
-import {
-  DEFAULT_REGION_LABEL,
-  filterRegions,
-  getRegionDong,
-  normalizeRegionLabel,
-} from "../utils/regions";
 import { uploadImages } from "../api/images";
 
 function toDateTimeLocal(date) {
@@ -20,7 +14,7 @@ function toDateTimeLocal(date) {
   ].join("-") + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function createInitialForm(regionLabel = DEFAULT_REGION_LABEL) {
+function createInitialForm() {
   const now = new Date();
   const pickupStart = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   const pickupEnd = new Date(now.getTime() + 5 * 60 * 60 * 1000);
@@ -33,7 +27,8 @@ function createInitialForm(regionLabel = DEFAULT_REGION_LABEL) {
     description: "",
     originalPrice: "",
     discountPrice: "",
-    regionLabel: normalizeRegionLabel(regionLabel),
+    regionLabel: "",
+    regionId: null,
     pickupPlace: "",
     pickupStartAt: toDateTimeLocal(pickupStart),
     pickupEndAt: toDateTimeLocal(pickupEnd),
@@ -49,12 +44,8 @@ function getNumericPrice(value) {
   return Number(String(value || "").replace(/[^0-9]/g, ""));
 }
 
-function createEditForm(product, regionLabel = DEFAULT_REGION_LABEL) {
-  const fallback = createInitialForm(regionLabel);
-  const productRegionValue = product?.regionLabel || product?.regionName || product?.region;
-  const matchedRegion = regionOptions.find(
-    (region) => region.dong === productRegionValue || region.label === productRegionValue,
-  );
+function createEditForm(product) {
+  const fallback = createInitialForm();
 
   return {
     ...fallback,
@@ -64,7 +55,8 @@ function createEditForm(product, regionLabel = DEFAULT_REGION_LABEL) {
     description: product?.description || fallback.description,
     originalPrice: String(product?.originalPriceValue || getNumericPrice(product?.originalPrice) || ""),
     discountPrice: String(product?.priceValue || getNumericPrice(product?.price) || ""),
-    regionLabel: normalizeRegionLabel(matchedRegion?.label || productRegionValue || fallback.regionLabel),
+    regionLabel: product?.regionLabel || product?.regionName || product?.region || "",
+    regionId: product?.regionId || null,
     pickupPlace: product?.pickupPlace || fallback.pickupPlace,
     pickupStartAt: product?.pickupStartAt || fallback.pickupStartAt,
     pickupEndAt: product?.pickupEndAt || fallback.pickupEndAt,
@@ -117,36 +109,38 @@ function latestDateTimeLocal(...values) {
 
 export function ProductCreatePage({
   currentUser,
-  selectedRegionLabel,
+  selectedRegion,
   productToEdit,
   onAddProduct,
   onUpdateProduct,
   onNavigate,
 }) {
   const isEditMode = Boolean(productToEdit);
-  const defaultRegionLabel = normalizeRegionLabel(
-    productToEdit?.regionLabel ||
-    productToEdit?.regionName ||
-    productToEdit?.region ||
-    selectedRegionLabel ||
-    currentUser?.region,
-  );
   const [form, setForm] = useState(() =>
-    productToEdit ? createEditForm(productToEdit, defaultRegionLabel) : createInitialForm(defaultRegionLabel),
+    productToEdit ? createEditForm(productToEdit) : createInitialForm(),
   );
   const [message, setMessage] = useState("");
   const [regionSearchOpen, setRegionSearchOpen] = useState(false);
-  const [regionKeyword, setRegionKeyword] = useState("");
   const [imagePreviews, setImagePreviews] = useState(() => productToEdit?.image ? [productToEdit.image] : []);
   const [imageFiles, setImageFiles] = useState([]);
   const [imageUploading, setImageUploading] = useState(false);
 
   useEffect(() => {
-    setForm(productToEdit ? createEditForm(productToEdit, defaultRegionLabel) : createInitialForm(defaultRegionLabel));
+    setForm(productToEdit ? createEditForm(productToEdit) : createInitialForm());
     setImagePreviews(productToEdit?.image ? [productToEdit.image] : []);
     setImageFiles([]);
     setMessage("");
-  }, [defaultRegionLabel, productToEdit]);
+  }, [productToEdit]);
+
+  useEffect(() => {
+    if (!productToEdit && selectedRegion) {
+      setForm((prev) => ({
+        ...prev,
+        regionLabel: selectedRegion.label,
+        regionId: selectedRegion.id,
+      }));
+    }
+  }, [selectedRegion, productToEdit]);
 
 if (currentUser?.role !== "BUSINESS") {
   return (
@@ -158,8 +152,6 @@ if (currentUser?.role !== "BUSINESS") {
     </section>
   );
 }
-
-const regionResults = filterRegions(regionKeyword);
 
 const handleImageChange = (event) => {
   const files = Array.from(event.target.files || []).slice(0, 5);
@@ -282,7 +274,6 @@ const handleSubmit = async (event) => {
     setImageUploading(false);
   }
 
-  const normalizedRegionLabel = normalizeRegionLabel(form.regionLabel);
   const pickupLabel = formatDateTimeLabel(form.pickupStartAt);
   const pickupEndLabel = formatDateTimeLabel(form.pickupEndAt);
   const shouldKeepOriginalPickup = isEditMode && !productToEdit?.pickupStartAt;
@@ -290,8 +281,9 @@ const handleSubmit = async (event) => {
 
   const productPayload = {
     title: form.title.trim(),
-    regionLabel: normalizedRegionLabel,
-    region: getRegionDong(normalizedRegionLabel),
+    regionId: form.regionId,
+    regionLabel: form.regionLabel,
+    region: form.regionLabel,
     category: form.category,
     defectReason: form.defectReason,
     description: form.description.trim(),
@@ -506,16 +498,14 @@ return (
             type="button"
             onClick={() => setRegionSearchOpen((prev) => !prev)}
           >
-            {form.regionLabel}
+            {form.regionLabel || "동네를 선택하세요"}
           </button>
         </div>
         {regionSearchOpen && (
           <RegionSearchPanel
-            keyword={regionKeyword}
-            results={regionResults}
-            onKeywordChange={setRegionKeyword}
-            onSelect={(regionLabel) => {
-              updateForm("regionLabel", normalizeRegionLabel(regionLabel));
+            onSelect={(region) => {
+              updateForm("regionLabel", region.label);
+              updateForm("regionId", region.id);
               setRegionSearchOpen(false);
             }}
           />
