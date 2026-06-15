@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>맛난이 API 테스트</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: monospace; background: #0f0f0f; color: #e0e0e0; padding: 20px; }
+        h1 { color: #f90; margin-bottom: 20px; font-size: 22px; }
+        h2 { color: #f90; font-size: 13px; margin-bottom: 10px; border-left: 3px solid #f90; padding-left: 8px; }
+        .section { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 14px; margin-bottom: 14px; }
+        .row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+        input, select, textarea {
+            background: #0f0f0f; border: 1px solid #444; color: #e0e0e0;
+            padding: 6px 10px; border-radius: 4px; font-family: monospace; font-size: 12px;
+            flex: 1; min-width: 80px;
+        }
+        textarea { min-height: 60px; resize: vertical; width: 100%; }
+        button { background: #f90; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-family: monospace; font-weight: bold; font-size: 12px; white-space: nowrap; }
+        button:hover { background: #ffaa22; }
+        button.del { background: #e44; color: #fff; }
+        button.del:hover { background: #f66; }
+        button.sec { background: #555; color: #fff; }
+        .result { margin-top: 8px; padding: 10px; background: #0a0a0a; border-radius: 4px; font-size: 11px; white-space: pre-wrap; word-break: break-all; border: 1px solid #333; max-height: 180px; overflow-y: auto; display: none; }
+        .result.show { display: block; }
+        .result.ok { border-color: #2a2; color: #6f6; }
+        .result.err { border-color: #e44; color: #f88; }
+        .token-box { background: #1a1a0a; border: 1px solid #660; padding: 10px 14px; border-radius: 4px; font-size: 12px; margin-bottom: 16px; }
+        .token-box span { color: #f90; word-break: break-all; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .hint { font-size: 11px; color: #666; margin-bottom: 6px; }
+        .auto-tag { font-size: 10px; color: #f90; margin-left: 4px; }
+        @media(max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<h1>🥕 맛난이 API 테스트</h1>
+
+<div class="token-box">
+    🔑 Token: <span id="tokenDisplay">없음 (로그인 필요)</span><br>
+    👤 닉네임: <span id="nicknameDisplay">-</span> | 역할: <span id="roleDisplay">-</span><br>
+    📦 마지막 상품ID: <span id="lastProductId">-</span> |
+    📅 마지막 예약ID: <span id="lastReservationId">-</span> |
+    💬 마지막 댓글ID: <span id="lastCommentId">-</span>
+</div>
+
+<div class="grid">
+    <!-- 인증 -->
+    <div>
+        <div class="section">
+            <h2>1. POST /api/auth/signup — 일반 회원가입</h2>
+            <p class="hint">regionId는 반드시 동(DONG) 레벨 ID 사용 (예: 1351=덕진동)</p>
+            <div class="row">
+                <input id="su_email" placeholder="이메일" value="test@test.com">
+                <input id="su_pw" placeholder="비밀번호" value="test1234">
+            </div>
+            <div class="row">
+                <input id="su_nick" placeholder="닉네임" value="테스트유저">
+                <input id="su_phone" placeholder="전화번호" value="010-1234-5678">
+                <input id="su_region" placeholder="regionId(DONG)" value="1351" style="max-width:120px">
+            </div>
+            <button onclick="signup()">회원가입</button>
+            <div class="result" id="r_signup"></div>
+        </div>
+
+        <div class="section">
+            <h2>2. POST /api/auth/login — 로그인</h2>
+            <div class="row">
+                <input id="login_email" placeholder="이메일" value="test@test.com">
+                <input id="login_pw" placeholder="비밀번호" value="test1234">
+            </div>
+            <button onclick="login()">로그인 🔑</button>
+            <div class="result" id="r_login"></div>
+        </div>
+
+        <div class="section">
+            <h2>POST /api/auth/signup/business — 사업자 회원가입</h2>
+            <p class="hint">테스트 사업자번호: 0000000000</p>
+            <div class="row">
+                <input id="bs_email" placeholder="이메일" value="shop@test.com">
+                <input id="bs_pw" placeholder="비밀번호" value="test1234">
+            </div>
+            <div class="row">
+                <input id="bs_nick" placeholder="닉네임" value="맛난베이커리">
+                <input id="bs_bno" placeholder="사업자번호" value="0000000000">
+            </div>
+            <div class="row">
+                <input id="bs_bname" placeholder="상호명" value="맛난 베이커리">
+                <input id="bs_owner" placeholder="대표자명" value="홍길동">
+                <input id="bs_region" placeholder="regionId(DONG)" value="1351" style="max-width:120px">
+            </div>
+            <button onclick="businessSignup()">사업자 회원가입</button>
+            <div class="result" id="r_bsignup"></div>
+        </div>
+
+        <div class="section">
+            <h2>POST /api/auth/refresh — 토큰 재발급</h2>
+            <div class="row">
+                <input id="refresh_token" placeholder="refresh token (로그인 후 자동입력)">
+            </div>
+            <button onclick="refresh()">재발급</button>
+            <div class="result" id="r_refresh"></div>
+        </div>
+    </div>
+
+    <!-- 지역 / 유저 -->
+    <div>
+        <div class="section">
+            <h2>GET /api/regions — 지역 조회</h2>
+            <p class="hint">비워두면 시도, 시도ID 입력하면 구/군, 구/군ID 입력하면 동 목록</p>
+            <p class="hint">예) 6=대전 → 184=유성구 → 1351~1360=동 목록</p>
+            <div class="row">
+                <input id="region_parentId" placeholder="parentId (비우면 시도 전체)">
+                <button onclick="getRegions()">조회</button>
+            </div>
+            <div class="result" id="r_regions"></div>
+        </div>
+
+        <div class="section">
+            <h2>GET /api/users/me — 내 정보</h2>
+            <button onclick="getMe()">조회</button>
+            <div class="result" id="r_me"></div>
+        </div>
+
+        <div class="section">
+            <h2>PATCH /api/users/me/region — 동네 변경</h2>
+            <div class="row">
+                <input id="region_id" placeholder="regionId (DONG 레벨)" value="1351">
+                <button onclick="updateRegion()">변경</button>
+            </div>
+            <div class="result" id="r_region"></div>
+        </div>
+
+        <div class="section">
+            <h2>GET /api/users/{id} — 판매자 프로필</h2>
+            <div class="row">
+                <input id="seller_id" placeholder="userId" value="1">
+                <button onclick="getSellerProfile()">조회</button>
+            </div>
+            <div class="result" id="r_seller"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 상품 -->
+<div class="section">
+    <h2>3. POST /api/products — 상품 등록 → 상품ID 자동저장됨<span class="auto-tag">▲ 자동입력</span></h2>
+    <p class="hint">상품 등록 후 아래 API들에 상품ID 자동 입력됩니다</p>
+    <div class="row">
+        <input id="p_title" placeholder="제목" value="못난이 당근 1kg">
+        <select id="p_category">
+            <option value="PRODUCE_SEAFOOD">PRODUCE_SEAFOOD</option>
+            <option value="BAKERY_DESSERT">BAKERY_DESSERT</option>
+            <option value="PROCESSED_FOOD">PROCESSED_FOOD</option>
+            <option value="ETC">ETC</option>
+        </select>
+        <select id="p_defect">
+            <option value="SHAPE_BAD">SHAPE_BAD</option>
+            <option value="NEAR_EXPIRY">NEAR_EXPIRY</option>
+            <option value="SCRATCH">SCRATCH</option>
+            <option value="ETC">ETC</option>
+        </select>
+    </div>
+    <div class="row">
+        <input id="p_original" placeholder="원가" value="5000">
+        <input id="p_discount" placeholder="할인가" value="3000">
+        <input id="p_region" placeholder="regionId(DONG)" value="1351">
+        <input id="p_pickup" placeholder="픽업 장소" value="유성구 주민센터 앞">
+    </div>
+    <div class="row">
+        <input id="p_start" placeholder="픽업 시작" value="2026-06-10T17:00:00">
+        <input id="p_end" placeholder="픽업 종료" value="2026-06-10T20:00:00">
+        <input id="p_expires" placeholder="만료" value="2026-06-11T12:00:00">
+    </div>
+    <textarea id="p_desc">집에서 기른 당근입니다. 모양이 조금 휘었어요.</textarea>
+    <br><br>
+    <button onclick="createProduct()">상품 등록</button>
+    <div class="result" id="r_create_product"></div>
+</div>
+
+<div class="grid">
+    <div class="section">
+        <h2>GET /api/products — 상품 목록</h2>
+        <div class="row">
+            <input id="list_region" placeholder="regionId" value="1351">
+            <button onclick="getProducts()">조회</button>
+        </div>
+        <div class="result" id="r_products"></div>
+    </div>
+
+    <div class="section">
+        <h2>GET /api/products/search — 검색</h2>
+        <div class="row">
+            <input id="search_q" placeholder="검색어" value="당근">
+            <button onclick="searchProducts()">검색</button>
+        </div>
+        <div class="result" id="r_search"></div>
+    </div>
+
+    <div class="section">
+        <h2>GET /api/products/{id} — 상품 상세</h2>
+        <div class="row">
+            <input id="prod_id" placeholder="productId">
+            <button onclick="getProduct()">조회</button>
+        </div>
+        <div class="result" id="r_product"></div>
+    </div>
+
+    <div class="section">
+        <h2>GET /api/products/time-sale — 타임세일</h2>
+        <div class="row">
+            <input id="ts_region" placeholder="regionId" value="1351">
+            <button onclick="getTimeSale()">조회</button>
+        </div>
+        <div class="result" id="r_timesale"></div>
+    </div>
+
+    <div class="section">
+        <h2>PATCH /api/products/{id}/status — 상태 변경</h2>
+        <div class="row">
+            <input id="ps_id" placeholder="productId">
+            <select id="ps_status">
+                <option value="ON_SALE">ON_SALE</option>
+                <option value="SOLD_OUT">SOLD_OUT</option>
+            </select>
+            <button onclick="updateProductStatus()">변경</button>
+        </div>
+        <div class="result" id="r_pstatus"></div>
+    </div>
+
+    <div class="section">
+        <h2>DELETE /api/products/{id} — 상품 삭제</h2>
+        <div class="row">
+            <input id="del_prod_id" placeholder="productId">
+            <button class="del" onclick="deleteProduct()">삭제</button>
+        </div>
+        <div class="result" id="r_del_product"></div>
+    </div>
+</div>
+
+<!-- 예약 -->
+<div class="grid">
+    <div class="section">
+        <h2>4. POST /api/products/{id}/reservations — 예약 → 예약ID 자동저장<span class="auto-tag">▲ 자동입력</span></h2>
+        <div class="row">
+            <input id="res_prod_id" placeholder="productId">
+            <button onclick="createReservation()">예약 요청</button>
+        </div>
+        <div class="result" id="r_reservation"></div>
+    </div>
+
+    <div class="section">
+        <h2>5. PATCH /api/reservations/{id}/status — 상태 변경</h2>
+        <p class="hint">후기 작성하려면 COMPLETED로 변경 필요</p>
+        <div class="row">
+            <input id="rs_id" placeholder="reservationId">
+            <select id="rs_status">
+                <option value="ACCEPTED">ACCEPTED</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="CANCELED">CANCELED</option>
+            </select>
+            <button onclick="updateReservationStatus()">변경</button>
+        </div>
+        <div class="result" id="r_rs"></div>
+    </div>
+
+    <div class="section">
+        <h2>GET /api/reservations/me — 내 예약</h2>
+        <button onclick="getMyReservations()">조회</button>
+        <div class="result" id="r_my_res"></div>
+    </div>
+</div>
+
+<!-- 댓글 -->
+<div class="grid">
+    <div class="section">
+        <h2>POST /api/products/{id}/comments — 댓글 작성 → 댓글ID 자동저장<span class="auto-tag">▲ 자동입력</span></h2>
+        <div class="row">
+            <input id="cm_prod_id" placeholder="productId">
+            <input id="cm_content" placeholder="내용" value="오늘 픽업 가능할까요?">
+            <button onclick="submitComment()">작성</button>
+        </div>
+        <div class="result" id="r_comment"></div>
+    </div>
+
+    <div class="section">
+        <h2>GET /api/products/{id}/comments — 댓글 조회</h2>
+        <div class="row">
+            <input id="cm_list_id" placeholder="productId">
+            <button onclick="getComments()">조회</button>
+        </div>
+        <div class="result" id="r_comments"></div>
+    </div>
+
+    <div class="section">
+        <h2>PATCH /api/comments/{id} — 댓글 수정</h2>
+        <p class="hint">댓글 작성 후 자동입력됨</p>
+        <div class="row">
+            <input id="cm_edit_id" placeholder="commentId (자동입력)">
+            <input id="cm_edit_content" placeholder="수정 내용" value="수정된 댓글입니다">
+            <button onclick="updateComment()">수정</button>
+        </div>
+        <div class="result" id="r_edit_comment"></div>
+    </div>
+
+    <div class="section">
+        <h2>DELETE /api/comments/{id} — 댓글 삭제</h2>
+        <div class="row">
+            <input id="cm_del_id" placeholder="commentId (자동입력)">
+            <button class="del" onclick="deleteComment()">삭제</button>
+        </div>
+        <div class="result" id="r_del_comment"></div>
+    </div>
+</div>
+
+<!-- 후기 -->
+<div class="grid">
+    <div class="section">
+        <h2>6. POST /api/reservations/{id}/reviews — 후기 작성</h2>
+        <p class="hint">⚠️ 예약 상태가 COMPLETED 일 때만 가능</p>
+        <div class="row">
+            <input id="rv_res_id" placeholder="reservationId (자동입력)">
+            <input id="rv_rating" placeholder="rating(1~5)" value="5" style="max-width:80px">
+            <input id="rv_content" placeholder="내용" value="좋았어요!">
+            <button onclick="createReview()">작성</button>
+        </div>
+        <div class="result" id="r_review"></div>
+    </div>
+
+    <div class="section">
+        <h2>GET /api/reviews — 전체 후기</h2>
+        <button onclick="getAllReviews()">조회</button>
+        <div class="result" id="r_reviews"></div>
+    </div>
+
+    <div class="section">
+        <h2>PATCH /api/reviews/{id} — 후기 수정</h2>
+        <div class="row">
+            <input id="rv_edit_id" placeholder="reviewId">
+            <input id="rv_edit_rating" placeholder="rating" value="4" style="max-width:60px">
+            <input id="rv_edit_content" placeholder="수정 내용" value="수정된 후기입니다">
+            <button onclick="updateReview()">수정</button>
+        </div>
+        <div class="result" id="r_edit_review"></div>
+    </div>
+
+    <div class="section">
+        <h2>DELETE /api/reviews/{id} — 후기 삭제</h2>
+        <div class="row">
+            <input id="rv_del_id" placeholder="reviewId">
+            <button class="del" onclick="deleteReview()">삭제</button>
+        </div>
+        <div class="result" id="r_del_review"></div>
+    </div>
+</div>
+
+<!-- 알림 / 마이페이지 -->
+<div class="grid">
+    <div class="section">
+        <h2>GET /api/notifications — 알림 목록</h2>
+        <button onclick="getNotifications()">조회</button>
+        <div class="result" id="r_notifs"></div>
+    </div>
+
+    <div class="section">
+        <h2>PATCH /api/notifications/{id}/read — 읽음</h2>
+        <div class="row">
+            <input id="notif_id" placeholder="notificationId" value="1">
+            <button onclick="markRead()">읽음</button>
+        </div>
+        <div class="result" id="r_read"></div>
+    </div>
+
+    <div class="section">
+        <h2>PATCH /api/notifications/read-all — 전체 읽음</h2>
+        <button onclick="markAllRead()">전체 읽음</button>
+        <div class="result" id="r_readall"></div>
+    </div>
+
+    <div class="section">
+        <h2>마이페이지</h2>
+        <div class="row">
+            <button onclick="myPurchases()">구매내역</button>
+            <button onclick="mySales()">판매내역</button>
+            <button onclick="myReservations()">예약내역</button>
+            <button onclick="myReviews()">내 후기</button>
+        </div>
+        <div class="result" id="r_mypage"></div>
+    </div>
+</div>
+
+<script>
+    const BASE = 'http://localhost:8080';
+    let token = '';
+
+    function authHeader() { return token ? { 'Authorization': 'Bearer ' + token } : {}; }
+
+    // ID 자동 채우기
+    function autoFill(fields, value) {
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+        });
+    }
+
+    function show(id, data, ok = true) {
+        const el = document.getElementById(id);
+        el.textContent = JSON.stringify(data, null, 2);
+        el.className = 'result show ' + (ok ? 'ok' : 'err');
+    }
+
+    async function req(method, url, body, resultId) {
+        try {
+            const res = await fetch(BASE + url, {
+                method,
+                headers: { 'Content-Type': 'application/json', ...authHeader() },
+                body: body ? JSON.stringify(body) : undefined
+            });
+            const data = await res.json();
+            show(resultId, data, res.ok);
+            return data;
+        } catch (e) {
+            show(resultId, { error: e.message }, false);
+        }
+    }
+
+    // 인증
+    async function signup() {
+        await req('POST', '/api/auth/signup', {
+            email: v('su_email'), password: v('su_pw'),
+            nickname: v('su_nick'), phone: v('su_phone'), regionId: n('su_region')
+        }, 'r_signup');
+    }
+
+    async function businessSignup() {
+        await req('POST', '/api/auth/signup/business', {
+            email: v('bs_email'), password: v('bs_pw'), nickname: v('bs_nick'),
+            phone: '010-0000-0000', regionId: n('bs_region'),
+            businessNumber: v('bs_bno'), businessName: v('bs_bname'), ownerName: v('bs_owner')
+        }, 'r_bsignup');
+    }
+
+    async function login() {
+        const data = await req('POST', '/api/auth/login', {
+            email: v('login_email'), password: v('login_pw')
+        }, 'r_login');
+        if (data?.data?.accessToken) {
+            token = data.data.accessToken;
+            document.getElementById('tokenDisplay').textContent = token.substring(0, 50) + '...';
+            document.getElementById('nicknameDisplay').textContent = data.data.nickname || '-';
+            document.getElementById('roleDisplay').textContent = data.data.role || '-';
+            document.getElementById('refresh_token').value = data.data.refreshToken || '';
+        }
+    }
+
+    async function refresh() {
+        const data = await req('POST', '/api/auth/refresh', { refreshToken: v('refresh_token') }, 'r_refresh');
+        if (data?.data?.accessToken) {
+            token = data.data.accessToken;
+            document.getElementById('tokenDisplay').textContent = token.substring(0, 50) + '...';
+        }
+    }
+
+    // 지역 / 유저
+    async function getRegions() {
+        const pid = v('region_parentId');
+        const url = pid ? `/api/regions?parentId=${pid}` : '/api/regions';
+        await req('GET', url, null, 'r_regions');
+    }
+    async function getMe() { await req('GET', '/api/users/me', null, 'r_me'); }
+    async function updateRegion() {
+        await req('PATCH', '/api/users/me/region', { regionId: n('region_id') }, 'r_region');
+    }
+    async function getSellerProfile() { await req('GET', `/api/users/${v('seller_id')}`, null, 'r_seller'); }
+
+    // 상품 - 등록 후 ID 자동 채우기
+    async function createProduct() {
+        const data = await req('POST', '/api/products', {
+            title: v('p_title'), description: v('p_desc'),
+            category: v('p_category'), defectReason: v('p_defect'),
+            originalPrice: n('p_original'), discountPrice: n('p_discount'),
+            regionId: n('p_region'), pickupPlace: v('p_pickup'),
+            pickupStartAt: v('p_start'), pickupEndAt: v('p_end'), expiresAt: v('p_expires'),
+            imageUrls: ['https://example.com/test.jpg']
+        }, 'r_create_product');
+
+        if (data?.data?.id) {
+            const pid = data.data.id;
+            document.getElementById('lastProductId').textContent = pid;
+            autoFill(['prod_id', 'ps_id', 'del_prod_id', 'res_prod_id', 'cm_prod_id', 'cm_list_id', 'list_region'], pid);
+            // list_region은 regionId라서 덮어쓰지 않기
+            autoFill(['prod_id', 'ps_id', 'del_prod_id', 'res_prod_id', 'cm_prod_id', 'cm_list_id'], pid);
+        }
+    }
+
+    async function getProducts() { await req('GET', `/api/products?regionId=${v('list_region')}`, null, 'r_products'); }
+    async function getProduct() { await req('GET', `/api/products/${v('prod_id')}`, null, 'r_product'); }
+    async function searchProducts() { await req('GET', `/api/products/search?q=${v('search_q')}`, null, 'r_search'); }
+    async function getTimeSale() { await req('GET', `/api/products/time-sale?regionId=${v('ts_region')}`, null, 'r_timesale'); }
+    async function updateProductStatus() {
+        await req('PATCH', `/api/products/${v('ps_id')}/status`, { status: v('ps_status') }, 'r_pstatus');
+    }
+    async function deleteProduct() { await req('DELETE', `/api/products/${v('del_prod_id')}`, null, 'r_del_product'); }
+
+    // 예약 - 생성 후 ID 자동 채우기
+    async function createReservation() {
+        const data = await req('POST', `/api/products/${v('res_prod_id')}/reservations`, null, 'r_reservation');
+        if (data?.data?.id) {
+            const rid = data.data.id;
+            document.getElementById('lastReservationId').textContent = rid;
+            autoFill(['rs_id', 'rv_res_id'], rid);
+        }
+    }
+    async function updateReservationStatus() {
+        await req('PATCH', `/api/reservations/${v('rs_id')}/status`, { status: v('rs_status') }, 'r_rs');
+    }
+    async function getMyReservations() { await req('GET', '/api/reservations/me', null, 'r_my_res'); }
+
+    // 댓글 - 작성 후 ID 자동 채우기
+    async function submitComment() {
+        const data = await req('POST', `/api/products/${v('cm_prod_id')}/comments`, { content: v('cm_content') }, 'r_comment');
+        if (data?.data?.id) {
+            const cid = data.data.id;
+            document.getElementById('lastCommentId').textContent = cid;
+            autoFill(['cm_edit_id', 'cm_del_id'], cid);
+        }
+    }
+    async function getComments() { await req('GET', `/api/products/${v('cm_list_id')}/comments`, null, 'r_comments'); }
+    async function updateComment() {
+        await req('PATCH', `/api/comments/${v('cm_edit_id')}`, { content: v('cm_edit_content') }, 'r_edit_comment');
+    }
+    async function deleteComment() { await req('DELETE', `/api/comments/${v('cm_del_id')}`, null, 'r_del_comment'); }
+
+    // 후기
+    async function createReview() {
+        const data = await req('POST', `/api/reservations/${v('rv_res_id')}/reviews`, {
+            rating: n('rv_rating'), content: v('rv_content')
+        }, 'r_review');
+        if (data?.data?.id) {
+            autoFill(['rv_edit_id', 'rv_del_id'], data.data.id);
+        }
+    }
+    async function getAllReviews() { await req('GET', '/api/reviews', null, 'r_reviews'); }
+    async function updateReview() {
+        await req('PATCH', `/api/reviews/${v('rv_edit_id')}`, {
+            rating: n('rv_edit_rating'), content: v('rv_edit_content')
+        }, 'r_edit_review');
+    }
+    async function deleteReview() { await req('DELETE', `/api/reviews/${v('rv_del_id')}`, null, 'r_del_review'); }
+
+    // 알림
+    async function getNotifications() { await req('GET', '/api/notifications', null, 'r_notifs'); }
+    async function markRead() { await req('PATCH', `/api/notifications/${v('notif_id')}/read`, null, 'r_read'); }
+    async function markAllRead() { await req('PATCH', '/api/notifications/read-all', null, 'r_readall'); }
+
+    // 마이페이지
+    async function myPurchases() { await req('GET', '/api/mypage/purchases', null, 'r_mypage'); }
+    async function mySales() { await req('GET', '/api/mypage/sales', null, 'r_mypage'); }
+    async function myReservations() { await req('GET', '/api/mypage/reservations', null, 'r_mypage'); }
+    async function myReviews() { await req('GET', '/api/mypage/reviews', null, 'r_mypage'); }
+
+    function v(id) { return document.getElementById(id)?.value || ''; }
+    function n(id) { return Number(document.getElementById(id)?.value || 0); }
+</script>
+</body>
+</html>
