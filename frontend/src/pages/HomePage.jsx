@@ -80,11 +80,12 @@ export function HomePage({ products, selectedRegion, onNavigate }) {
                             장터 둘러보기
                         </button>
                         <span className="discount-badge">최대 60% 할인</span>
+                        <span className="discount-badge">최대 60% 할인</span>
                     </div>
                 </div>
                 <div className="hero-visual" aria-hidden="true">
                     <img
-                        src="https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&w=1200&q=80"
+                        src="https://raw.githubusercontent.com/CLD-05/team3-matnani-app/main/testdata/madlen.png"
                         alt=""
                     />
                 </div>
