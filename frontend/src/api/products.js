@@ -6,12 +6,14 @@ const STATUS_LABEL = {
     ON_SALE: "판매중",
     RESERVED: "예약중",
     SOLD_OUT: "판매완료",
+    EXPIRED: "마감",
 };
 
 const STATUS_TONE = {
     ON_SALE: "sale",
     RESERVED: "reserved",
     SOLD_OUT: "soldout",
+    EXPIRED: "soldout",
 };
 
 const CATEGORY_LABEL = {
@@ -108,6 +110,7 @@ export function normalizeProduct(p, fallback = {}) {
             fallback.image ||
             "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&w=900&q=80",
         imageUrls: p.imageUrls || fallback.imageUrls || [],
+        rawStatus: p.status || fallback.rawStatus,
         status: STATUS_LABEL[p.status] || p.status || fallback.status,
         statusTone: STATUS_TONE[p.status] || fallback.statusTone || "sale",
         regionId: p.regionId ?? fallback.regionId ?? null,

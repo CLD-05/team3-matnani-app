@@ -161,13 +161,18 @@ export function ProductCreatePage({
     }
 
     const handleImageChange = (event) => {
-        const files = Array.from(event.target.files || []).slice(0, 5);
-        if (files.length === 0) return;
+        const newFiles = Array.from(event.target.files || []);
+        if (newFiles.length === 0) return;
 
-        setImageFiles(files);
+        const remaining = 5 - imagePreviews.length;
+        if (remaining <= 0) return;
+
+        const filesToAdd = newFiles.slice(0, remaining);
+
+        setImageFiles((prev) => [...prev, ...filesToAdd]);
 
         Promise.all(
-            files.map(
+            filesToAdd.map(
                 (file) =>
                     new Promise((resolve) => {
                         const reader = new FileReader();
@@ -175,7 +180,26 @@ export function ProductCreatePage({
                         reader.readAsDataURL(file);
                     }),
             ),
-        ).then((previews) => setImagePreviews(previews.filter(Boolean)));
+        ).then((previews) => {
+            setImagePreviews((prev) => [...prev, ...previews.filter(Boolean)]);
+        });
+
+        event.target.value = "";
+    };
+
+    const handleImageRemoveAll = () => {
+        setImagePreviews([]);
+        setImageFiles([]);
+    };
+
+    const handleImageRemoveOne = (index) => {
+        setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+        setImageFiles((prev) => {
+            const httpCount = imagePreviews.filter((p) => p.startsWith("http")).length;
+            const fileIndex = index - httpCount;
+            if (fileIndex < 0) return prev;
+            return prev.filter((_, i) => i !== fileIndex);
+        });
     };
 
     const updateForm = (key, value) => {
@@ -366,31 +390,33 @@ export function ProductCreatePage({
             />
             <section className="create-layout">
                 <div className="upload-panel">
-                    <div className="upload-box">
-                        {imagePreviews[0] ? (
-                            <img className="upload-preview-main" src={imagePreviews[0]} alt="선택한 상품 이미지" />
-                        ) : (
-                            <>
-                                <ImagePlus size={42} />
-                                <strong>상품 이미지</strong>
-                                <span>최대 5장까지 등록</span>
-                            </>
-                        )}
-                    </div>
-                    {imagePreviews.length > 1 && (
+                    {imagePreviews.length > 0 && (
                         <div className="upload-preview-list" aria-label="선택한 이미지 미리보기">
                             {imagePreviews.map((preview, index) => (
-                                <img key={preview} src={preview} alt={`선택한 상품 이미지 ${index + 1}`} />
+                                <div key={preview} className="upload-preview-item">
+                                    <img src={preview} alt={`선택한 상품 이미지 ${index + 1}`} />
+                                    <button
+                                        type="button"
+                                        className="upload-preview-remove"
+                                        onClick={() => handleImageRemoveOne(index)}
+                                        aria-label={`이미지 ${index + 1} 제거`}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     )}
-                    <label className="auth-link-button upload-select-button">
+                    <label className={`upload-select-button${imagePreviews.length >= 5 ? " disabled" : ""}`}>
                         <Upload size={17} />
-                        이미지 선택
+                        {imagePreviews.length > 0
+                            ? `이미지 추가 (${imagePreviews.length}/5)`
+                            : "이미지 선택"}
                         <input
                             type="file"
                             accept="image/*"
                             multiple
+                            disabled={imagePreviews.length >= 5}
                             onChange={handleImageChange}
                         />
                     </label>
@@ -398,9 +424,9 @@ export function ProductCreatePage({
                         <button
                             className="auth-link-button"
                             type="button"
-                            onClick={() => setImagePreviews([])}
+                            onClick={handleImageRemoveAll}
                         >
-                            이미지 제거
+                            전체 제거
                         </button>
                     )}
                 </div>

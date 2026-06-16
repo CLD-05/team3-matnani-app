@@ -80,6 +80,7 @@ export function MarketPage({ products, currentUser, selectedRegion, onNavigate }
     const filteredProducts = useMemo(() => {
         const keyword = searchKeyword.trim().toLowerCase();
         const filtered = products.filter((product) => {
+            if (product.rawStatus === "EXPIRED" || product.status === "마감") return false;
             const robustCategoryMatched = isAllOption(category) || product.category === category;
             const robustRegionMatched = matchesSelectedRegion(product, neighborhood);
             const robustStatusMatched = matchesSelectedStatus(product, status);
