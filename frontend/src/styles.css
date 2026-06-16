@@ -2966,6 +2966,11 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.region-toggle:hover {
+  background: #008f5a;
 }
 
 .region-toggle.active {
@@ -3181,16 +3186,66 @@ a {
   gap: 8px;
 }
 
-.upload-preview-list img {
+.upload-preview-item {
+  position: relative;
+}
+
+.upload-preview-item img {
   width: 100%;
   aspect-ratio: 1;
   border: 1px solid #dce5da;
   border-radius: 10px;
   object-fit: cover;
+  display: block;
+}
+
+.upload-preview-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-preview-remove:hover {
+  background: rgba(0, 0, 0, 0.8);
 }
 
 .upload-select-button {
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border: 0;
+  border-radius: 14px;
+  color: #fff;
+  background: #00a86b;
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 8px 20px rgba(0, 168, 107, 0.22);
+  transition: background 0.15s;
+}
+
+.upload-select-button:hover:not(.disabled) {
+  background: #008f5a;
+}
+
+.upload-select-button.disabled {
+  background: #b0c4b8;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .upload-select-button input {
@@ -3530,6 +3585,11 @@ a {
   font-size: 17px;
   font-weight: 950;
   box-shadow: 0 14px 30px rgba(0, 168, 107, 0.22);
+  transition: background 0.15s;
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: #008f5a;
 }
 
 .auth-link-button {
@@ -4328,4 +4388,330 @@ a {
   font-style: normal;
   font-size: 14px;
   font-weight: 950;
+}
+
+/* ── 전역 hover 효과 ── */
+
+/* 상단 네비 링크 */
+.top-nav a:not(.active):hover {
+  color: #00a86b;
+}
+
+/* 헤더 버튼들 */
+.location-button,
+.login-button,
+.icon-button,
+.menu-button,
+.logout-button,
+.sort-button,
+.back-button {
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.location-button:hover,
+.login-button:hover,
+.sort-button:hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+.icon-button:hover,
+.menu-button:hover {
+  background: #f0f4ef;
+}
+
+.logout-button:hover {
+  background: #fff0e8;
+  border-color: #ffb89a;
+}
+
+.back-button:hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+/* 상품 카드 리프트 */
+.product-card {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.product-card[role="button"]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 52px rgba(42, 68, 46, 0.14);
+}
+
+/* 히어로 CTA */
+.primary-button {
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.primary-button:hover {
+  background: #e86908;
+  box-shadow: 0 18px 36px rgba(255, 122, 26, 0.38);
+}
+
+/* 예약/문의 버튼 */
+.reserve-button {
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.reserve-button:not(:disabled):hover {
+  background: #008f5a;
+  box-shadow: 0 18px 36px rgba(0, 168, 107, 0.32);
+}
+
+.comment-button {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.comment-button:hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+/* 카테고리 탭 / 동네 버튼 */
+.category-tabs button:not(.active):hover {
+  color: #00a86b;
+}
+
+.neighborhoods button:not(.active):hover {
+  background: #dde4db;
+}
+
+/* 필터 칩 */
+.filter-chips button {
+  transition: background 0.15s;
+}
+
+.filter-chips button:not(.active):hover {
+  background: #dce4da;
+}
+
+/* 예약 탭 / 히스토리 탭 */
+.reservation-tabs button,
+.history-tabs button {
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.reservation-tabs button:not(.active):hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+.history-tabs button:not(.active):hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+/* 예약/거래 액션 버튼 */
+.reservation-ghost-button,
+.reservation-primary-button,
+.reservation-danger-button {
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.reservation-ghost-button:hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+.reservation-primary-button:hover {
+  background: #008f5a;
+  box-shadow: 0 10px 24px rgba(0, 168, 107, 0.28);
+}
+
+.reservation-danger-button:not(:disabled):hover {
+  background: #fff0e8;
+  border-color: #ffb89a;
+}
+
+/* 판매자 상품 타일 */
+.seller-product-tile {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  cursor: pointer;
+}
+
+.seller-product-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(31, 42, 36, 0.12);
+}
+
+/* 판매자 섹션 버튼 */
+.seller-section-head button {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.seller-section-head button:hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+/* 판매자 리뷰 탭 */
+.seller-review-tabs button:not(.active) {
+  transition: color 0.15s;
+}
+
+.seller-review-tabs button:not(.active):hover {
+  color: #4d574f;
+}
+
+/* 지역 선택 패널 버튼들 */
+.region-cities button:not(.active):hover {
+  background: #ecf0eb;
+}
+
+.region-districts button:not(.active):hover {
+  background: #e5e9e4;
+}
+
+.region-result-item {
+  transition: background 0.12s;
+}
+
+.region-result-item:hover {
+  background: #f7faf6;
+}
+
+.region-all-button {
+  transition: background 0.12s;
+}
+
+.region-all-button:hover {
+  background: #f7faf6;
+}
+
+/* 비밀 댓글 토글 */
+.secret-comment-toggle {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.secret-comment-toggle:not(.open):hover {
+  background: #f7faf6;
+  border-color: #b8cdb4;
+}
+
+/* 댓글/답글 제출 버튼 */
+.comment-form button {
+  transition: background 0.15s;
+}
+
+.comment-form button:hover {
+  background: #008f5a;
+}
+
+.reply-form button {
+  transition: background 0.15s;
+}
+
+.reply-form button:hover {
+  background: #e86908;
+}
+
+/* 댓글 툴바 버튼 */
+.comment-toolbar button {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.comment-toolbar button:hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+/* 리뷰 아이콘 버튼 */
+.review-icon-button {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.review-icon-button:not(.danger):hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+.review-icon-button.danger:hover {
+  background: #fff0e8;
+  border-color: #ffb89a;
+}
+
+/* 알림 읽음 처리 버튼 */
+.notification-read-all:not(:disabled) {
+  transition: background 0.15s;
+}
+
+.notification-read-all:not(:disabled):hover {
+  background: #cff0de;
+}
+
+/* 알림 필터 버튼 */
+.notification-filter-row button:not(.active) {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.notification-filter-row button:not(.active):hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+/* 인증 링크 버튼 */
+.auth-link-button {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.auth-link-button:hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+/* 비밀 댓글 잠금 해제 버튼 */
+.secret-locked button {
+  transition: background 0.15s;
+}
+
+.secret-locked button:hover {
+  background: #008f5a;
+}
+
+/* 디테일 편집 폼 버튼들 */
+.detail-edit-actions button {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+/* 앱 메시지 닫기 버튼 */
+.app-message button {
+  transition: background 0.15s;
+}
+
+.app-message button:hover {
+  background: #fff0e8;
+}
+
+/* 알림 삭제 버튼들 */
+.notification-delete-selected:not(:disabled),
+.notification-delete-all:not(:disabled),
+.notification-delete-cancel {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.notification-delete-selected:not(:disabled):hover {
+  background: #1c6ae8;
+}
+
+.notification-delete-all:not(:disabled):hover,
+.notification-delete-cancel:hover {
+  background: #eef5ff;
+}
+
+/* 댓글 히스토리 카드 버튼 */
+.comment-history-meta button {
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.comment-history-meta button:hover {
+  background: #f4f8f3;
+  border-color: #b8cdb4;
+}
+
+/* 리뷰 작성/히스토리 제출 액션 버튼 */
+.review-submitted-actions button,
+.review-edit-buttons button {
+  transition: background 0.15s, border-color 0.15s;
 }

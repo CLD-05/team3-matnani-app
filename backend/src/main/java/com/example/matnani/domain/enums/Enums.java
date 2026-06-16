@@ -19,7 +19,7 @@ public class Enums {
     }
 
     public enum ProductStatus {
-        ON_SALE, RESERVED, SOLD_OUT
+        ON_SALE, RESERVED, SOLD_OUT, EXPIRED
     }
 
     public enum VerifyStatus {
