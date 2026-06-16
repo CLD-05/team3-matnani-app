@@ -204,7 +204,11 @@ export function ProductDetailPage({
     const statusTone = reservedQuantity > 0 ? "reserved" : product.statusTone;
     const stockLabel = `${product.remainingQuantity || 0}개 보유중${reservedQuantity > 0 ? ` · ${reservedQuantity}개 예약중` : ""
     }${completedQuantity > 0 ? ` · ${completedQuantity}개 판매완료` : ""}`;
-    const expiresInMinutes = product.expiresAt ? getMinutesUntil(product.expiresAt) : product.expiresInMinutes;
+    const expiresInMinutes = product.pickupEndAt
+        ? getMinutesUntil(product.pickupEndAt)
+        : product.expiresAt
+            ? getMinutesUntil(product.expiresAt)
+            : product.expiresInMinutes;
 
     // 판매자 전체 통계 (개별 상품 후기가 아닌 판매자 누적 후기/별점)
     const sellerReviewCount = sellerReviews.length;
@@ -376,7 +380,7 @@ export function ProductDetailPage({
                             <dd>{product.pickupPlace || `${product.region} 주민센터 앞`}</dd>
                         </div>
                         <div>
-                            <dt>유통기한</dt>
+                            <dt>마감시간</dt>
                             <dd>{formatTimeLeft(expiresInMinutes)} 남음</dd>
                         </div>
                         <div>
