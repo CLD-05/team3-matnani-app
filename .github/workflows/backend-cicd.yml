@@ -142,10 +142,9 @@ jobs:
           if [ "$OVERLAY" = "dev" ]; then
             echo "Auto merge for dev"
             sleep 3
-            gh pr merge "$PR_URL" \
-              --squash \
-              --delete-branch \
-              --merge
+            gh pr merge "$PR_URL" --squash --delete-branch --auto 2> /dev/null \
+            || gh pr merge "$PR_URL" --squash --delete-branch
+          
           else
             echo "PROD 환경 Merge 전 승인 필요"
             echo "리뷰 후 Merge 해주세요."
