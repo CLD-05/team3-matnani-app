@@ -120,7 +120,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add .
           git commit -m "deploy(${OVERLAY}): team3-app 이미지 ${IMAGE_TAG} 반영"
-          git push origin "$BRANCH"
+          git push origin "$BRANCH" --force
 
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           echo "skipped=false" >> $GITHUB_OUTPUT
