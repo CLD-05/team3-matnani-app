@@ -256,8 +256,8 @@ public class ProductService {
 
         // 연관 데이터 삭제 순서 (FK 제약 위반 방지)
         // 1. 이 상품의 예약에 달린 알림 삭제
-        List<Long> reservationIds = reservationRepository.findByProductId(productId)
-                .stream().map(Reservation::getId).collect(Collectors.toList());
+        List<Reservation> reservations = reservationRepository.findByProductId(productId);
+        List<Long> reservationIds = reservations.stream().map(Reservation::getId).collect(Collectors.toList());
         if (!reservationIds.isEmpty()) {
             notificationRepository.deleteByReservationIdIn(reservationIds);
             reviewRepository.deleteByReservationIdIn(reservationIds);
@@ -266,8 +266,8 @@ public class ProductService {
         // 2. 이 상품에 직접 달린 알림 삭제
         notificationRepository.deleteByProductId(productId);
 
-        // 3. 예약 삭제
-        reservationRepository.deleteAll(reservationRepository.findByProductId(productId));
+        // 3. 예약 삭제 (이미 조회한 리스트 재사용)
+        reservationRepository.deleteAll(reservations);
 
         // 4. 비밀 댓글 삭제
         secretCommentRepository.deleteByProductId(productId);

@@ -54,7 +54,7 @@ public class ReservationService {
     @Transactional
     public ReservationResponse updateStatus(Long userId, Long reservationId, ReservationStatus status) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new RuntimeException("예약을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("예약을 찾을 수 없습니다."));
 
         boolean isSeller = reservation.getSeller().getId().equals(userId);
         boolean isBuyer = reservation.getBuyer().getId().equals(userId);
