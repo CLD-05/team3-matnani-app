@@ -127,6 +127,7 @@ jobs:
 
 
       # Config Repo PR + Merge
+      # Dev는 자동 Merge, Prod는 수동 승인 후 Merge
       - name: Create PR & Merge to Config Repo
         if: steps.kustomize.outputs.skipped != 'true'
         env:
