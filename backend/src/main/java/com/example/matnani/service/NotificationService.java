@@ -80,7 +80,7 @@ public class NotificationService {
     // 선택 삭제
     @Transactional
     public void deleteNotifications(Long userId, Collection<Long> ids) {
-        ids.forEach(id -> deleteNotification(userId, id));
+        notificationRepository.deleteByIdInAndUserId(ids, userId);
     }
 
     // 전체 삭제
