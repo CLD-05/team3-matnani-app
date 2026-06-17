@@ -5,6 +5,9 @@ import com.example.matnani.dto.request.ProductRequest;
 import com.example.matnani.dto.response.ProductResponse;
 import com.example.matnani.repository.*;
 import static com.example.matnani.domain.enums.Enums.*;
+import com.example.matnani.exception.BadRequestException;
+import com.example.matnani.exception.ForbiddenException;
+import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,7 +92,7 @@ public class ProductService {
     // 상품 상세
     public ProductResponse getProduct(Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
 
         ProductResponse response = buildResponse(product);
 
@@ -108,12 +111,12 @@ public class ProductService {
     @Transactional
     public ProductResponse createProduct(Long userId, ProductRequest request) {
         User seller = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("유저를 찾을 수 없습니다."));
         if (seller.getRole() != UserRole.BUSINESS) {
-            throw new RuntimeException("사업자 회원만 상품을 등록할 수 있습니다.");
+            throw new ForbiddenException("사업자 회원만 상품을 등록할 수 있습니다.");
         }
         Region region = regionRepository.findById(request.getRegionId())
-                .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("지역을 찾을 수 없습니다."));
 
         BigDecimal discountRate = request.getDiscountRate() != null
                 ? request.getDiscountRate().setScale(2, RoundingMode.HALF_UP)
@@ -124,10 +127,10 @@ public class ProductService {
         int totalQty = request.getTotalQuantity() != null ? request.getTotalQuantity() : 1;
         int perPersonLmt = request.getPerPersonLimit() != null ? request.getPerPersonLimit() : totalQty;
         if (totalQty < 1) {
-            throw new RuntimeException("총 판매 수량은 1개 이상이어야 합니다.");
+            throw new BadRequestException("총 판매 수량은 1개 이상이어야 합니다.");
         }
         if (perPersonLmt < 1 || perPersonLmt > totalQty) {
-            throw new RuntimeException("1인당 구매 제한은 1개 이상, 총 판매 수량 이하로 설정해주세요.");
+            throw new BadRequestException("1인당 구매 제한은 1개 이상, 총 판매 수량 이하로 설정해주세요.");
         }
 
         Product product = Product.builder()
@@ -178,14 +181,14 @@ public class ProductService {
     @Transactional
     public ProductResponse updateProduct(Long userId, Long productId, ProductRequest request) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
 
         if (!product.getSeller().getId().equals(userId)) {
-            throw new RuntimeException("수정 권한이 없습니다.");
+            throw new ForbiddenException("수정 권한이 없습니다.");
         }
         Region region = request.getRegionId() != null
                 ? regionRepository.findById(request.getRegionId())
-                .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."))
+                .orElseThrow(() -> new NotFoundException("지역을 찾을 수 없습니다."))
                 : product.getRegion();
 
         BigDecimal updateDiscountRate = request.getDiscountRate() != null
@@ -224,14 +227,14 @@ public class ProductService {
     @Transactional
     public void updateProductStatus(Long userId, Long productId, ProductStatus status) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
 
         if (!product.getSeller().getId().equals(userId)) {
-            throw new RuntimeException("권한이 없습니다.");
+            throw new ForbiddenException("권한이 없습니다.");
         }
 
         if (product.getStatus().equals(ProductStatus.SOLD_OUT)) {
-            throw new RuntimeException("재고 소진된 상품은 상태를 변경할 수 없습니다.");
+            throw new BadRequestException("재고 소진된 상품은 상태를 변경할 수 없습니다.");
         }
 
         product.updateStatus(status);
@@ -241,14 +244,14 @@ public class ProductService {
     @Transactional
     public void deleteProduct(Long userId, Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
 
         if (!product.getSeller().getId().equals(userId)) {
-            throw new RuntimeException("삭제 권한이 없습니다.");
+            throw new ForbiddenException("삭제 권한이 없습니다.");
         }
 
         if (product.getStatus().equals(ProductStatus.RESERVED)) {
-            throw new RuntimeException("예약 중인 상품은 삭제할 수 없습니다.");
+            throw new BadRequestException("예약 중인 상품은 삭제할 수 없습니다.");
         }
 
         // 연관 데이터 삭제 순서 (FK 제약 위반 방지)

@@ -4,6 +4,9 @@ import com.example.matnani.domain.entity.*;
 import com.example.matnani.dto.response.*;
 import com.example.matnani.repository.*;
 import static com.example.matnani.domain.enums.Enums.*;
+import com.example.matnani.exception.BadRequestException;
+import com.example.matnani.exception.ForbiddenException;
+import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +27,7 @@ public class UserService {
     // 내 정보 조회
     public UserResponse getMyInfo(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("유저를 찾을 수 없습니다."));
         return UserResponse.from(user);
     }
 
@@ -32,9 +35,9 @@ public class UserService {
     @Transactional
     public UserResponse updateRegion(Long userId, Long regionId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("유저를 찾을 수 없습니다."));
         Region region = regionRepository.findById(regionId)
-                .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("지역을 찾을 수 없습니다."));
 
         user.updateRegion(region);
         return UserResponse.from(user);
@@ -43,7 +46,7 @@ public class UserService {
     // 판매자 프로필 조회
     public SellerProfileResponse getSellerProfile(Long sellerId) {
         User seller = userRepository.findById(sellerId)
-                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("유저를 찾을 수 없습니다."));
 
         List<ProductResponse> products = productRepository
                 .findBySellerId(sellerId)

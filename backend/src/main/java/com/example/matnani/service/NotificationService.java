@@ -4,6 +4,9 @@ import com.example.matnani.domain.entity.*;
 import com.example.matnani.dto.response.NotificationResponse;
 import com.example.matnani.repository.*;
 import static com.example.matnani.domain.enums.Enums.*;
+import com.example.matnani.exception.BadRequestException;
+import com.example.matnani.exception.ForbiddenException;
+import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,10 +47,10 @@ public class NotificationService {
     @Transactional
     public void markAsRead(Long userId, Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("알림을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("알림을 찾을 수 없습니다."));
 
         if (!notification.getUser().getId().equals(userId)) {
-            throw new RuntimeException("권한이 없습니다.");
+            throw new ForbiddenException("권한이 없습니다.");
         }
 
         notification.markAsRead();
@@ -65,10 +68,10 @@ public class NotificationService {
     @Transactional
     public void deleteNotification(Long userId, Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("알림을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("알림을 찾을 수 없습니다."));
 
         if (!notification.getUser().getId().equals(userId)) {
-            throw new RuntimeException("권한이 없습니다.");
+            throw new ForbiddenException("권한이 없습니다.");
         }
 
         notificationRepository.delete(notification);

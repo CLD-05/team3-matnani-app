@@ -12,6 +12,9 @@ import com.example.matnani.repository.RegionRepository;
 import com.example.matnani.repository.UserRepository;
 import static com.example.matnani.domain.enums.Enums.*;
 import com.example.matnani.security.JwtService;
+import com.example.matnani.exception.BadRequestException;
+import com.example.matnani.exception.ForbiddenException;
+import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,14 +36,14 @@ public class AuthService {
     @Transactional
     public void signup(SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("이미 사용 중인 이메일입니다.");
+            throw new BadRequestException("이미 사용 중인 이메일입니다.");
         }
         if (userRepository.existsByNickname(request.getNickname())) {
-            throw new RuntimeException("이미 사용 중인 닉네임입니다.");
+            throw new BadRequestException("이미 사용 중인 닉네임입니다.");
         }
 
         Region region = regionRepository.findById(request.getRegionId())
-                .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("지역을 찾을 수 없습니다."));
 
         User user = User.builder()
                 .email(request.getEmail())
@@ -58,21 +61,21 @@ public class AuthService {
     @Transactional
     public void businessSignup(BusinessSignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("이미 사용 중인 이메일입니다.");
+            throw new BadRequestException("이미 사용 중인 이메일입니다.");
         }
         if (userRepository.existsByNickname(request.getNickname())) {
-            throw new RuntimeException("이미 사용 중인 닉네임입니다.");
+            throw new BadRequestException("이미 사용 중인 닉네임입니다.");
         }
         if (businessProfileRepository.existsByBusinessNumber(request.getBusinessNumber())) {
-            throw new RuntimeException("이미 등록된 사업자번호입니다.");
+            throw new BadRequestException("이미 등록된 사업자번호입니다.");
         }
         if (!businessNumberService.verify(request.getBusinessNumber(), request.getOwnerName(),
                 request.getStartDate())) {
-            throw new RuntimeException("사업자등록정보가 일치하지 않습니다. 사업자번호, 대표자성명, 개업일자를 확인해주세요.");
+            throw new BadRequestException("사업자등록정보가 일치하지 않습니다. 사업자번호, 대표자성명, 개업일자를 확인해주세요.");
         }
 
         Region region = regionRepository.findById(request.getRegionId())
-                .orElseThrow(() -> new RuntimeException("지역을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("지역을 찾을 수 없습니다."));
 
         User user = User.builder()
                 .email(request.getEmail())
@@ -102,7 +105,7 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다."));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw new BadRequestException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
         String accessToken = jwtService.generateToken(user);
@@ -134,18 +137,18 @@ public class AuthService {
     // 토큰 재발급 - Redis 검증 + rotation
     public LoginResponse refresh(String refreshToken) {
         if (!jwtService.isValid(refreshToken) || !jwtService.isRefreshToken(refreshToken)) {
-            throw new RuntimeException("유효하지 않은 refresh token입니다.");
+            throw new BadRequestException("유효하지 않은 refresh token입니다.");
         }
 
         Long userId = jwtService.getUserId(refreshToken);
 
         // Redis에 저장된 토큰과 일치하는지 검증
         if (!tokenRedisService.isValidRefreshToken(userId, refreshToken)) {
-            throw new RuntimeException("만료되거나 이미 사용된 refresh token입니다.");
+            throw new BadRequestException("만료되거나 이미 사용된 refresh token입니다.");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("유저를 찾을 수 없습니다."));
 
         // 기존 refresh token 삭제 후 새로운 토큰 발급 (rotation)
         tokenRedisService.deleteRefreshToken(userId);

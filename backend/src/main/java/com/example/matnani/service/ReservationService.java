@@ -1,10 +1,13 @@
 package com.example.matnani.service;
 
-import com.example.matnani.config.DuplicateReservationException;
+import com.example.matnani.exception.DuplicateReservationException;
 import com.example.matnani.domain.entity.*;
 import com.example.matnani.dto.response.ReservationResponse;
 import com.example.matnani.repository.*;
 import static com.example.matnani.domain.enums.Enums.*;
+import com.example.matnani.exception.BadRequestException;
+import com.example.matnani.exception.ForbiddenException;
+import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -34,12 +37,12 @@ public class ReservationService {
         try {
             boolean acquired = lock.tryLock(5, 10, TimeUnit.SECONDS);
             if (!acquired) {
-                throw new RuntimeException("현재 예약 요청이 많습니다. 잠시 후 다시 시도해주세요.");
+                throw new BadRequestException("현재 예약 요청이 많습니다. 잠시 후 다시 시도해주세요.");
             }
             return reservationInternalService.createReservationInternal(buyerId, productId, quantity);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("예약 처리 중 오류가 발생했습니다.");
+            throw new BadRequestException("예약 처리 중 오류가 발생했습니다.");
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
@@ -61,7 +64,7 @@ public class ReservationService {
                 && reservation.getStatus() == ReservationStatus.REQUESTED) {
             // 허용 - 아래 로직으로 계속 진행
         } else if (!isSeller) {
-            throw new RuntimeException("권한이 없습니다.");
+            throw new ForbiddenException("권한이 없습니다.");
         }
 
         reservation.updateStatus(status);

@@ -1,5 +1,6 @@
 package com.example.matnani.service;
 
+import com.example.matnani.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,13 +29,13 @@ public class BusinessNumberService {
 
     public boolean verify(String businessNumber, String ownerName, String startDate) {
         if (businessNumber == null || !businessNumber.matches("\\d{10}")) {
-            throw new RuntimeException("사업자등록번호는 하이픈 없이 10자리 숫자여야 합니다.");
+            throw new BadRequestException("사업자등록번호는 하이픈 없이 10자리 숫자여야 합니다.");
         }
         if (ownerName == null || ownerName.isBlank()) {
-            throw new RuntimeException("대표자성명을 입력해주세요.");
+            throw new BadRequestException("대표자성명을 입력해주세요.");
         }
         if (startDate == null || !startDate.matches("\\d{8}")) {
-            throw new RuntimeException("개업일자는 YYYYMMDD 형식 8자리 숫자여야 합니다.");
+            throw new BadRequestException("개업일자는 YYYYMMDD 형식 8자리 숫자여야 합니다.");
         }
 
         // 개발 테스트용 번호 - test-mode 활성화 시 국세청 API 호출 없이 통과
@@ -78,7 +79,7 @@ public class BusinessNumberService {
 
         } catch (Exception e) {
             log.error("사업자 진위확인 API 호출 실패: {}", e.getMessage());
-            throw new RuntimeException("사업자 진위확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+            throw new BadRequestException("사업자 진위확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
         }
     }
 }
