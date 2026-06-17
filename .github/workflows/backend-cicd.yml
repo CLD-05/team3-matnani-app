@@ -56,10 +56,10 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
-      # mvnw 실행 권한 부여
-      - name: Grant execute permission
-        working-directory: backend
-        run: chmod +x mvnw
+#      # mvnw 실행 권한 부여
+#      - name: Grant execute permission
+#        working-directory: backend
+#        run: chmod +x mvnw
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -76,10 +76,6 @@ jobs:
           echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
 
-      # 빌드 테스트
-      - name: Test Build
-        working-directory: backend
-        run: ./mvnw clean package -DskipTests
 
       # 이미지 빌드 + 푸시
       - name: Build & Push Docker image
