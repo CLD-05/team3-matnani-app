@@ -27,11 +27,7 @@ import {
   updateReview as requestUpdateReview,
 } from "./api/reviews";
 import { Header } from "./components/Header";
-import { initialProducts } from "./data/products";
 
-import { initialReservations } from "./data/reservations";
-import { initialReviews } from "./data/reviews";
-import { notifications as initialNotifications } from "./data/activity";
 import { BusinessSignupPage } from "./pages/BusinessSignupPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
@@ -87,7 +83,7 @@ function isProtectedPath(path) {
 
 export default function App() {
   const [path, setPath] = useState(window.location.pathname);
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -100,12 +96,9 @@ export default function App() {
   // 앱 시작 시 상품 목록 불러오기
   useEffect(() => {
     fetchProducts()
-      .then((apiProducts) => {
-        // ─── 클라우드 배포 시 아래 줄을 setProducts(apiProducts); 로 교체하세요 ───
-        setProducts([...apiProducts, ...initialProducts]);
-      })
+      .then(setProducts)
       .catch(() => {
-        setAppMessage("상품 목록을 불러오지 못해 기본 데이터로 표시합니다.");
+        setAppMessage("상품 목록을 불러오지 못했습니다.");
       });
   }, []);
 

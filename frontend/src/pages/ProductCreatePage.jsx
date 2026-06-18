@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ImagePlus, Upload } from "lucide-react";
-import { categories } from "../data/constants";
+const categories = ["전체", "농수산물", "베이커리", "가공식품", "기타"];
 import { PageIntro } from "../components/PageIntro";
 import { RegionSearchPanel } from "../components/RegionSearchPanel";
 import { uploadImages } from "../api/images";
