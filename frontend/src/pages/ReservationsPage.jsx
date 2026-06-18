@@ -8,7 +8,13 @@ import {
   UserRound,
   XCircle,
 } from "lucide-react";
-import { reservationStatuses } from "../data/reservations";
+const reservationStatuses = {
+  REQUESTED: { label: "예약 요청", tone: "requested", buyerText: "판매자 수락을 기다리고 있어요.", sellerText: "구매자의 예약 요청을 확인해주세요." },
+  ACCEPTED: { label: "예약 수락", tone: "accepted", buyerText: "예약이 확정되었습니다. 픽업 시간에 방문해주세요.", sellerText: "예약을 수락했습니다. 픽업 준비를 진행해주세요." },
+  CANCELED: { label: "예약 취소", tone: "canceled", buyerText: "예약이 취소되었습니다.", sellerText: "취소된 예약입니다." },
+  COMPLETED: { label: "거래 완료", tone: "completed", buyerText: "거래가 완료되었습니다.", sellerText: "거래가 완료되었습니다." },
+  NO_SHOW: { label: "노쇼", tone: "canceled", buyerText: "노쇼로 처리되어 일정 기간 구매가 제한될 수 있습니다.", sellerText: "노쇼 처리된 예약입니다." },
+};
 
 export function ReservationsPage({
   currentUser,
