@@ -28,13 +28,9 @@ public class NoShowScheduler {
         for (Reservation reservation : targets) {
             reservation.setStatus(ReservationStatus.CANCELED);
 
-            // 재고 복구
+            // restoreQuantity()로 통일 (재고 복구 + 상태 동기화)
             Product product = reservation.getProduct();
-            int restored = product.getRemainingQuantity() + reservation.getQuantity();
-            product.setRemainingQuantity(restored);
-            if (product.getStatus() == ProductStatus.SOLD_OUT) {
-                product.updateStatus(ProductStatus.ON_SALE);
-            }
+            product.restoreQuantity(reservation.getQuantity());
 
             // 노쇼 카운트 + 패널티
             User buyer = reservation.getBuyer();

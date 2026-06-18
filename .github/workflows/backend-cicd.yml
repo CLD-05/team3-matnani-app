@@ -127,6 +127,7 @@ jobs:
 
 
       # Config Repo PR + Merge
+      # Dev는 자동 Merge, Prod는 수동 승인 후 Merge
       - name: Create PR & Merge to Config Repo
         if: steps.kustomize.outputs.skipped != 'true'
         env:
@@ -138,12 +139,23 @@ jobs:
             --head "$BRANCH" \
             --title "deploy(${OVERLAY}): backend ${IMAGE_TAG}" \
             --body "Update backend image tag to ${IMAGE_TAG}. dev는 merge 시 ArgoCD가 자동 배포, prod는 수동 확인 후 배포")
-
+          
           if [ "$OVERLAY" = "dev" ]; then
             echo "Auto merge for dev"
-            sleep 3
-            gh pr merge "$PR_URL" --squash --delete-branch --auto 2> /dev/null \
-            || gh pr merge "$PR_URL" --squash --delete-branch
+          
+            for i in {1..10}; do
+              STATE=$(gh pr view "$PR_URL" --repo CLD-05/team3-matnani-config --json mergeStateStatus --jq '.mergeStateStatus')
+              echo "PR state: $STATE"
+              if [ "$STATE" = "CLEAN" ]; then
+                break
+              fi
+              sleep 3
+            done
+          
+            gh pr merge "$PR_URL" \
+              --repo CLD-05/team3-matnani-config \
+              --squash \
+              --delete-branch
           
           else
             echo "PROD 환경 Merge 전 승인 필요"
