@@ -42,8 +42,11 @@ public class AuthService {
             throw new BadRequestException("이미 사용 중인 닉네임입니다.");
         }
 
-        Region region = regionRepository.findById(request.getRegionId())
-                .orElseThrow(() -> new NotFoundException("지역을 찾을 수 없습니다."));
+        Region region = null;
+        if (request.getRegionId() != null) {
+            region = regionRepository.findById(request.getRegionId())
+                    .orElseThrow(() -> new NotFoundException("지역을 찾을 수 없습니다."));
+        }
 
         User user = User.builder()
                 .email(request.getEmail())
