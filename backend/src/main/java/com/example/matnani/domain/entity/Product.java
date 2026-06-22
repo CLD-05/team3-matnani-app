@@ -2,6 +2,7 @@ package com.example.matnani.domain.entity;
 
 import com.example.matnani.domain.enums.Enums.*;
 import com.example.matnani.dto.request.ProductRequest;
+import com.example.matnani.exception.BadRequestException;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -133,9 +134,11 @@ public class Product {
     }
 
     // 재고 차감 - 재고 소진 시 SOLD_OUT 자동 전환
+    // [수정] 기존: RuntimeException → GlobalExceptionHandler에서 400으로 뭉뚱그려짐
+    // [수정] 변경: BadRequestException으로 명시 → 의도한 400, 메시지 일관성 확보
     public void deductQuantity(int quantity) {
         if (this.remainingQuantity < quantity) {
-            throw new RuntimeException("재고가 부족합니다.");
+            throw new BadRequestException("재고가 부족합니다.");
         }
         this.remainingQuantity -= quantity;
         if (this.remainingQuantity == 0) {

@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -57,12 +56,13 @@ public class SecretCommentService {
             notificationService.createNotification(product.getSeller(), NotificationType.COMMENT, product,
                     null);
         } else {
-            Set<Long> notifiedUserIds = secretCommentRepository.findByProductId(productId)
-                    .stream()
-                    .map(c -> c.getWriter().getId())
-                    .filter(id -> !id.equals(userId))
-                    .collect(Collectors.toSet());
-            for (Long targetUserId : notifiedUserIds) {
+            // 판매자가 직접 댓글 다는 경우 — 해당 상품에 댓글 단 다른 사용자들에게 알림
+            // [수정] 기존: findByProductId()로 전체 댓글 엔티티 로딩 → Java stream으로 ID 추출
+            //             댓글 많을수록 불필요한 엔티티 로딩 증가
+            // [수정] 변경: writerIds 전용 쿼리로 ID만 조회 → 엔티티 로딩 없음
+            List<Long> writerIds = secretCommentRepository
+                    .findDistinctWriterIdsByProductId(productId, userId);
+            for (Long targetUserId : writerIds) {
                 userRepository.findById(targetUserId)
                         .ifPresent(target -> notificationService.createNotification(
                                 target, NotificationType.COMMENT, product, null));
