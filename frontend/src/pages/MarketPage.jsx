@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import {
-    categories,
-    productStatuses,
-    sortOptions,
-} from "../data/constants";
+const categories = ["전체", "농수산물", "베이커리", "가공식품", "기타"];
+const productStatuses = ["전체", "판매중", "예약중", "판매완료"];
+const sortOptions = [
+    { value: "latest", label: "최신순" },
+    { value: "near_expiry", label: "마감임박순" },
+    { value: "discount_high", label: "할인율 높은순" },
+    { value: "price_low", label: "낮은 가격순" },
+    { value: "price_high", label: "높은 가격순" },
+    { value: "review_count", label: "리뷰 많은순" },
+    { value: "rating_high", label: "리뷰 좋은순" },
+];
 import { FilterGroup } from "../components/FilterGroup";
 import { PageIntro } from "../components/PageIntro";
 import { ProductCard } from "../components/ProductCard";

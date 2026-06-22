@@ -42,7 +42,8 @@ public class SecurityConfig {
                                 "/api/auth/signup/business",
                                 "/api/auth/login",
                                 "/api/auth/logout",
-                                "/api/auth/refresh")
+                                "/api/auth/refresh",
+                                "/actuator/health")
                         .permitAll()
 
                         // ↓ 구체적인 경로 먼저 (me는 인증 필요)

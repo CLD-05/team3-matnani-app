@@ -188,7 +188,7 @@ public class ProductService {
         return response;
     }
 
-    // 배치: 목록용 N+1 해소 (이미지/리뷰 IN 쿼리로 3번 고정)
+    // 배치: 목록용 N+1 해소
     private List<ProductResponse> buildResponses(List<Product> products) {
         if (products.isEmpty()) return List.of();
 
@@ -220,7 +220,7 @@ public class ProductService {
         }).collect(Collectors.toList());
     }
 
-    // 상품 검색 - title 앞 와일드카드 제거, description 포함 검색
+    // 상품 검색
     public List<ProductResponse> searchProducts(String keyword) {
         List<Product> products = productRepository.searchByKeyword(
                 keyword + "%",
@@ -260,6 +260,8 @@ public class ProductService {
             throw new BadRequestException("예약 중인 상품은 삭제할 수 없습니다.");
         }
 
+        // 연관 데이터 삭제 순서 (FK 제약 위반 방지)
+        // 1. 이 상품의 예약에 달린 알림 삭제
         List<Reservation> reservations = reservationRepository.findByProductId(productId);
         List<Long> reservationIds = reservations.stream().map(Reservation::getId).collect(Collectors.toList());
         if (!reservationIds.isEmpty()) {
@@ -267,10 +269,19 @@ public class ProductService {
             reviewRepository.deleteByReservationIdIn(reservationIds);
         }
 
+        // 2. 이 상품에 직접 달린 알림 삭제
         notificationRepository.deleteByProductId(productId);
+
+        // 3. 예약 삭제
         reservationRepository.deleteAll(reservations);
+
+        // 4. 비밀 댓글 삭제
         secretCommentRepository.deleteByProductId(productId);
+
+        // 5. 이미지 삭제
         productImageRepository.deleteByProductId(productId);
+
+        // 6. 상품 삭제
         productRepository.delete(product);
     }
 }

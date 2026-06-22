@@ -60,11 +60,8 @@ public class ReviewService {
 
     // 판매자별 후기 목록 (ID 기반)
     public List<ReviewResponse> getReviewsBySeller(Long sellerId) {
-        return reservationRepository.findBySellerId(sellerId)
+        return reviewRepository.findByReservationSellerId(sellerId)
                 .stream()
-                .map(reservation -> reviewRepository.findByReservationId(reservation.getId()))
-                .filter(java.util.Optional::isPresent)
-                .map(java.util.Optional::get)
                 .map(ReviewResponse::from)
                 .collect(Collectors.toList());
     }
