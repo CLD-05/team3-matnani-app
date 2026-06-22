@@ -81,7 +81,10 @@ public class ReservationService {
             }
         } else if (status == ReservationStatus.NO_SHOW) {
             reservation.getBuyer().addNoShowPenalty();
-            product.updateStatus(ProductStatus.SOLD_OUT);
+            // [수정] 기존: product.updateStatus(SOLD_OUT) — 재고가 남아있어도 강제 SOLD_OUT
+            // [수정] 변경: restoreQuantity()로 재고 복구 후 상태는 재고에 따라 자동 결정
+            //             (재고 0이면 SOLD_OUT 유지, 재고 > 0이면 ON_SALE 복귀)
+            product.restoreQuantity(reservation.getQuantity());
         }
 
         // STATUS_CHANGE 알림 - 행위자의 상대방에게 전송
@@ -145,21 +148,16 @@ public class ReservationService {
     }
 
     // 마이페이지 - 절약 금액
+    // [수정] 기존: 완료 예약 전체 로딩 후 Java stream 합산 → 이력 증가 시 선형 악화
+    // [수정] 변경: DB SUM() 1쿼리로 해결
     public int getTotalSavings(Long buyerId) {
-        return reservationRepository
-                .findByBuyerIdAndStatus(buyerId, ReservationStatus.COMPLETED)
-                .stream()
-                .mapToInt(r -> (r.getProduct().getOriginalPrice() - r.getFinalPrice())
-                        * r.getQuantity())
-                .sum();
+        return reservationRepository.sumSavingsByBuyerId(buyerId);
     }
 
     // 마이페이지 - 구출 횟수
+    // [수정] 기존: 완료 예약 전체 로딩 후 Java stream 합산
+    // [수정] 변경: DB SUM() 1쿼리로 해결
     public int getRescueCount(Long buyerId) {
-        return (int) reservationRepository
-                .findByBuyerIdAndStatus(buyerId, ReservationStatus.COMPLETED)
-                .stream()
-                .mapToInt(Reservation::getQuantity)
-                .sum();
+        return reservationRepository.sumRescueCountByBuyerId(buyerId);
     }
 }

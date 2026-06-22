@@ -23,6 +23,18 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @Query("SELECT COALESCE(AVG(r.rating), 0) FROM Review r JOIN r.reservation res WHERE res.product.id = :productId")
     double findAverageRatingByProductId(@Param("productId") Long productId);
 
+    @Query("SELECT res.product.id, COUNT(r) " +
+            "FROM Review r JOIN r.reservation res " +
+            "WHERE res.product.id IN :productIds " +
+            "GROUP BY res.product.id")
+    List<Object[]> countByProductIdIn(@Param("productIds") List<Long> productIds);
+
+    @Query("SELECT res.product.id, COALESCE(AVG(r.rating), 0) " +
+            "FROM Review r JOIN r.reservation res " +
+            "WHERE res.product.id IN :productIds " +
+            "GROUP BY res.product.id")
+    List<Object[]> findAverageRatingByProductIdIn(@Param("productIds") List<Long> productIds);
+
     @Modifying
     @Query("DELETE FROM Review r WHERE r.reservation.id IN :reservationIds")
     void deleteByReservationIdIn(@Param("reservationIds") List<Long> reservationIds);
