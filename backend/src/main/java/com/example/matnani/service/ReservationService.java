@@ -35,7 +35,7 @@ public class ReservationService {
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            boolean acquired = lock.tryLock(5, 10, TimeUnit.SECONDS);
+            boolean acquired = lock.tryLock(5, 3, TimeUnit.SECONDS);
             if (!acquired) {
                 throw new BadRequestException("현재 예약 요청이 많습니다. 잠시 후 다시 시도해주세요.");
             }
