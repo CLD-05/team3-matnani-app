@@ -9,10 +9,13 @@ import com.example.matnani.exception.BadRequestException;
 import com.example.matnani.exception.ForbiddenException;
 import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,23 +26,27 @@ public class ReservationService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final RedissonClient redissonClient;
     private final ReservationInternalService reservationInternalService;
-    private final StockRedisService stockRedisService;
 
-    // 예약 생성 (Redis DECR 원자적 재고 감소)
+    // 예약 생성 (Redis 분산락 + 재고 기반)
     public ReservationResponse createReservation(Long buyerId, Long productId, int quantity) {
-        Long remaining = stockRedisService.decrement(productId, quantity);
-
-        if (remaining < 0) {
-            stockRedisService.increment(productId, quantity);
-            throw new BadRequestException("재고가 없습니다.");
-        }
+        String lockKey = "reservation:product:" + productId;
+        RLock lock = redissonClient.getLock(lockKey);
 
         try {
+            boolean acquired = lock.tryLock(5, 3, TimeUnit.SECONDS);
+            if (!acquired) {
+                throw new BadRequestException("현재 예약 요청이 많습니다. 잠시 후 다시 시도해주세요.");
+            }
             return reservationInternalService.createReservationInternal(buyerId, productId, quantity);
-        } catch (Exception e) {
-            stockRedisService.increment(productId, quantity);
-            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BadRequestException("예약 처리 중 오류가 발생했습니다.");
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 
@@ -65,16 +72,19 @@ public class ReservationService {
         // 재고 기반 상품 상태 동기화
         Product product = reservation.getProduct();
         if (status == ReservationStatus.CANCELED) {
+            // 취소 시 재고 복구 (재고 > 0 이면 자동 ON_SALE)
             product.restoreQuantity(reservation.getQuantity());
-            stockRedisService.increment(product.getId(), reservation.getQuantity());
         } else if (status == ReservationStatus.COMPLETED) {
+            // 완료 시: 잔여 재고가 없으면 SOLD_OUT, 있으면 그대로
             if (product.getRemainingQuantity() == 0) {
                 product.updateStatus(ProductStatus.SOLD_OUT);
             }
         } else if (status == ReservationStatus.NO_SHOW) {
             reservation.getBuyer().addNoShowPenalty();
+            // [수정] 기존: product.updateStatus(SOLD_OUT) — 재고가 남아있어도 강제 SOLD_OUT
+            // [수정] 변경: restoreQuantity()로 재고 복구 후 상태는 재고에 따라 자동 결정
+            //             (재고 0이면 SOLD_OUT 유지, 재고 > 0이면 ON_SALE 복귀)
             product.restoreQuantity(reservation.getQuantity());
-            stockRedisService.increment(product.getId(), reservation.getQuantity());
         }
 
         // STATUS_CHANGE 알림 - 행위자의 상대방에게 전송
