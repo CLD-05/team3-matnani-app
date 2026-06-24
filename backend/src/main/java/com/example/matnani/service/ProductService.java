@@ -9,11 +9,16 @@ import com.example.matnani.exception.BadRequestException;
 import com.example.matnani.exception.ForbiddenException;
 import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,63 +35,31 @@ public class ProductService {
     private final SecretCommentRepository secretCommentRepository;
     private final DiscountQueueService discountQueueService;
 
-    // 홈 피드 - 필터/정렬/페이징
+    // 홈 피드 - DB 레벨 정렬/페이징 + 배치 N+1 해소
     public List<ProductResponse> getProducts(Long regionId, ProductCategory category,
                                              String sort, ProductStatus status,
                                              int page, int size) {
         ProductStatus filterStatus = status != null ? status : ProductStatus.ON_SALE;
-        List<Product> products = productRepository.findWithFilters(regionId, filterStatus, category);
 
-        switch (sort) {
-            case "near_expiry" -> products.sort((a, b) -> {
-                if (a.getExpiresAt() == null)
-                    return 1;
-                if (b.getExpiresAt() == null)
-                    return -1;
-                return a.getExpiresAt().compareTo(b.getExpiresAt());
-            });
-            case "discount_high" -> products.sort((a, b) -> {
-                if (a.getDiscountRate() == null)
-                    return 1;
-                if (b.getDiscountRate() == null)
-                    return -1;
-                return b.getDiscountRate().compareTo(a.getDiscountRate());
-            });
-            default -> products.sort((a, b) -> {
-                if (a.getCreatedAt() == null)
-                    return 1;
-                if (b.getCreatedAt() == null)
-                    return -1;
-                return b.getCreatedAt().compareTo(a.getCreatedAt());
-            });
-        }
+        Sort dbSort = switch (sort) {
+            case "near_expiry"   -> Sort.by(Sort.Order.asc("expiresAt").nullsLast());
+            case "discount_high" -> Sort.by(Sort.Order.desc("discountRate").nullsLast());
+            default              -> Sort.by(Sort.Order.desc("createdAt").nullsLast());
+        };
 
-        int fromIndex = page * size;
-        if (fromIndex >= products.size())
-            return List.of();
-        int toIndex = Math.min(fromIndex + size, products.size());
-        products = products.subList(fromIndex, toIndex);
+        Page<Product> productPage = productRepository.findWithFiltersPageable(
+                regionId, filterStatus, category,
+                PageRequest.of(page, size, dbSort)
+        );
 
-        return products.stream()
-                .map(this::buildResponse)
-                .collect(Collectors.toList());
+        return buildResponses(productPage.getContent());
     }
 
-    // 타임세일
+    // 타임세일 - DB 필터+정렬 + 배치 N+1 해소
     public List<ProductResponse> getTimeSaleProducts(Long regionId) {
-        return productRepository
-                .findByRegionIdAndStatus(regionId, ProductStatus.ON_SALE)
-                .stream()
-                .filter(p -> Boolean.TRUE.equals(p.getTimeSale()))
-                .sorted((a, b) -> {
-                    if (a.getExpiresAt() == null)
-                        return 1;
-                    if (b.getExpiresAt() == null)
-                        return -1;
-                    return a.getExpiresAt().compareTo(b.getExpiresAt());
-                })
-                .map(this::buildResponse)
-                .collect(Collectors.toList());
+        List<Product> products = productRepository
+                .findTimeSaleProducts(regionId, ProductStatus.ON_SALE);
+        return buildResponses(products);
     }
 
     // 상품 상세
@@ -203,7 +176,7 @@ public class ProductService {
         return buildResponse(product);
     }
 
-    // ─── 공통 헬퍼: 이미지 + 후기 통계 포함 응답 생성 ───────────────
+    // 단건: 상품 상세용
     private ProductResponse buildResponse(Product product) {
         List<String> imageUrls = productImageRepository
                 .findByProductIdOrderBySortOrder(product.getId())
@@ -215,12 +188,45 @@ public class ProductService {
         return response;
     }
 
+    // 배치: 목록용 N+1 해소
+    private List<ProductResponse> buildResponses(List<Product> products) {
+        if (products.isEmpty()) return List.of();
+
+        List<Long> ids = products.stream().map(Product::getId).collect(Collectors.toList());
+
+        Map<Long, List<String>> imageMap = productImageRepository
+                .findByProductIdInOrderBySortOrder(ids)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        pi -> pi.getProduct().getId(),
+                        Collectors.mapping(ProductImage::getImageUrl, Collectors.toList())
+                ));
+
+        Map<Long, Long> countMap = new HashMap<>();
+        reviewRepository.countByProductIdIn(ids)
+                .forEach(row -> countMap.put((Long) row[0], (Long) row[1]));
+
+        Map<Long, Double> avgMap = new HashMap<>();
+        reviewRepository.findAverageRatingByProductIdIn(ids)
+                .forEach(row -> avgMap.put((Long) row[0], (Double) row[1]));
+
+        return products.stream().map(p -> {
+            ProductResponse res = ProductResponse.from(
+                    p, imageMap.getOrDefault(p.getId(), List.of()));
+            res.setReviewStats(
+                    countMap.getOrDefault(p.getId(), 0L),
+                    avgMap.getOrDefault(p.getId(), 0.0));
+            return res;
+        }).collect(Collectors.toList());
+    }
+
     // 상품 검색
     public List<ProductResponse> searchProducts(String keyword) {
-        return productRepository.searchByKeyword(keyword)
-                .stream()
-                .map(this::buildResponse)
-                .collect(Collectors.toList());
+        List<Product> products = productRepository.searchByKeyword(
+                keyword + "%",
+                "%" + keyword + "%"
+        );
+        return buildResponses(products);
     }
 
     // 상품 상태 변경
@@ -266,7 +272,7 @@ public class ProductService {
         // 2. 이 상품에 직접 달린 알림 삭제
         notificationRepository.deleteByProductId(productId);
 
-        // 3. 예약 삭제 (이미 조회한 리스트 재사용)
+        // 3. 예약 삭제
         reservationRepository.deleteAll(reservations);
 
         // 4. 비밀 댓글 삭제

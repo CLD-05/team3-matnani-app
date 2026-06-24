@@ -4,10 +4,10 @@ import com.example.matnani.domain.entity.*;
 import com.example.matnani.dto.response.NotificationResponse;
 import com.example.matnani.repository.*;
 import static com.example.matnani.domain.enums.Enums.*;
-import com.example.matnani.exception.BadRequestException;
 import com.example.matnani.exception.ForbiddenException;
 import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -30,6 +30,11 @@ public class NotificationService {
     }
 
     // 알림 생성
+    // [수정] @Async 추가 — 예약/댓글 트랜잭션과 분리하여 별도 스레드에서 실행
+    //        예약 응답시간에서 알림 INSERT 시간 제거 (부하 시 병목 해소)
+    // [주의] 호출부 트랜잭션이 커밋된 뒤 별도 스레드에서 실행되므로
+    //        연관 엔티티(user, product, reservation)는 이미 DB에 존재 → 안전
+    @Async
     @Transactional
     public void createNotification(User user, NotificationType type,
                                    Product product, Reservation reservation) {
