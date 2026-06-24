@@ -12,6 +12,7 @@ import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByRegionIdAndStatus(Long regionId, ProductStatus status);
+    List<Product> findByStatus(ProductStatus status);
     List<Product> findBySellerId(Long sellerId);
 
     // 스케줄러 내부용 (전체 조회)
