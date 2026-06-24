@@ -5,15 +5,22 @@ import static com.example.matnani.domain.enums.Enums.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByRegionIdAndStatus(Long regionId, ProductStatus status);
     List<Product> findByStatus(ProductStatus status);
     List<Product> findBySellerId(Long sellerId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Product p WHERE p.id = :id")
+    Optional<Product> findByIdWithLock(@Param("id") Long id);
 
     // 스케줄러 내부용 (전체 조회)
     @Query("SELECT p FROM Product p WHERE " +

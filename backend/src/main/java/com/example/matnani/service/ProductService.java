@@ -9,6 +9,8 @@ import com.example.matnani.exception.BadRequestException;
 import com.example.matnani.exception.ForbiddenException;
 import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -63,6 +65,7 @@ public class ProductService {
     }
 
     // 상품 상세
+    @Cacheable(value = "product", key = "#productId")
     public ProductResponse getProduct(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
@@ -152,6 +155,7 @@ public class ProductService {
 
     // 상품 수정
     @Transactional
+    @CacheEvict(value = "product", key = "#productId")
     public ProductResponse updateProduct(Long userId, Long productId, ProductRequest request) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
@@ -231,6 +235,7 @@ public class ProductService {
 
     // 상품 상태 변경
     @Transactional
+    @CacheEvict(value = "product", key = "#productId")
     public void updateProductStatus(Long userId, Long productId, ProductStatus status) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
@@ -248,6 +253,7 @@ public class ProductService {
 
     // 상품 삭제 - RESERVED 상태만 삭제 불가
     @Transactional
+    @CacheEvict(value = "product", key = "#productId")
     public void deleteProduct(Long userId, Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
