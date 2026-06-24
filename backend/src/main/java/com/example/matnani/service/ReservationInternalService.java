@@ -29,7 +29,7 @@ public class ReservationInternalService {
             throw new BadRequestException("예약 수량은 1개 이상이어야 합니다.");
         }
 
-        Product product = productRepository.findByIdWithLock(productId)
+        Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
 
         if (!product.getStatus().equals(ProductStatus.ON_SALE)) {
