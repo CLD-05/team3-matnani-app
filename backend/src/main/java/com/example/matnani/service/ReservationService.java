@@ -9,13 +9,12 @@ import com.example.matnani.exception.BadRequestException;
 import com.example.matnani.exception.ForbiddenException;
 import com.example.matnani.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,25 +27,37 @@ public class ReservationService {
     private final NotificationService notificationService;
     private final RedissonClient redissonClient;
     private final ReservationInternalService reservationInternalService;
+    private final RedisStockService redisStockService;
 
-    // 예약 생성 (Redis 분산락 + 재고 기반)
+    // 예약 생성 (Lua 스크립트 기반 재고 차감)
+    // [수정] 기존: Redisson 분산락 → DB 재고 확인 → DB 차감 (직렬 처리)
+    //             200명 동시 요청 시 락 대기 큐 → p95 6초, 타임아웃 742건
+    // [변경]: Lua 스크립트로 Redis 재고 원자 차감 → 성공 시 DB 저장 (병렬 처리)
+    //             락 없이 처리 → 타임아웃 제거, 응답시간 대폭 개선 예상
     public ReservationResponse createReservation(Long buyerId, Long productId, int quantity) {
-        String lockKey = "reservation:product:" + productId;
-        RLock lock = redissonClient.getLock(lockKey);
 
+        // Step 1: Lua 스크립트로 Redis 재고 원자 차감 (락 없음)
+        long remaining = redisStockService.deductStock(productId, quantity);
+
+        if (remaining == -2) {
+            // Redis에 재고 키 없음 → DB에서 동기화 후 재시도
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
+            redisStockService.syncStockToRedis();
+            remaining = redisStockService.deductStock(productId, quantity);
+        }
+
+        if (remaining < 0) {
+            throw new BadRequestException("재고가 부족합니다.");
+        }
+
+        // Step 2: Redis 재고 차감 성공 → DB 트랜잭션으로 예약 저장
         try {
-            boolean acquired = lock.tryLock(2, 10, TimeUnit.SECONDS);
-            if (!acquired) {
-                throw new BadRequestException("현재 예약 요청이 많습니다. 잠시 후 다시 시도해주세요.");
-            }
             return reservationInternalService.createReservationInternal(buyerId, productId, quantity);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new BadRequestException("예약 처리 중 오류가 발생했습니다.");
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
+        } catch (Exception e) {
+            // DB 저장 실패 시 Redis 재고 복구
+            redisStockService.restoreStock(productId, quantity);
+            throw e;
         }
     }
 
@@ -59,35 +70,31 @@ public class ReservationService {
         boolean isSeller = reservation.getSeller().getId().equals(userId);
         boolean isBuyer = reservation.getBuyer().getId().equals(userId);
 
-        // 구매자는 REQUESTED 상태일 때만 취소 가능
         if (isBuyer && status == ReservationStatus.CANCELED
                 && reservation.getStatus() == ReservationStatus.REQUESTED) {
-            // 허용 - 아래 로직으로 계속 진행
+            // 허용
         } else if (!isSeller) {
             throw new ForbiddenException("권한이 없습니다.");
         }
 
         reservation.updateStatus(status);
 
-        // 재고 기반 상품 상태 동기화
         Product product = reservation.getProduct();
         if (status == ReservationStatus.CANCELED) {
-            // 취소 시 재고 복구 (재고 > 0 이면 자동 ON_SALE)
             product.restoreQuantity(reservation.getQuantity());
+            // Redis 재고도 복구
+            redisStockService.restoreStock(product.getId(), reservation.getQuantity());
         } else if (status == ReservationStatus.COMPLETED) {
-            // 완료 시: 잔여 재고가 없으면 SOLD_OUT, 있으면 그대로
             if (product.getRemainingQuantity() == 0) {
                 product.updateStatus(ProductStatus.SOLD_OUT);
             }
         } else if (status == ReservationStatus.NO_SHOW) {
             reservation.getBuyer().addNoShowPenalty();
-            // [수정] 기존: product.updateStatus(SOLD_OUT) — 재고가 남아있어도 강제 SOLD_OUT
-            // [수정] 변경: restoreQuantity()로 재고 복구 후 상태는 재고에 따라 자동 결정
-            //             (재고 0이면 SOLD_OUT 유지, 재고 > 0이면 ON_SALE 복귀)
             product.restoreQuantity(reservation.getQuantity());
+            // Redis 재고도 복구
+            redisStockService.restoreStock(product.getId(), reservation.getQuantity());
         }
 
-        // STATUS_CHANGE 알림 - 행위자의 상대방에게 전송
         User notifyTarget = isBuyer ? reservation.getSeller() : reservation.getBuyer();
         notificationService.createNotification(
                 notifyTarget,
@@ -148,15 +155,11 @@ public class ReservationService {
     }
 
     // 마이페이지 - 절약 금액
-    // [수정] 기존: 완료 예약 전체 로딩 후 Java stream 합산 → 이력 증가 시 선형 악화
-    // [수정] 변경: DB SUM() 1쿼리로 해결
     public int getTotalSavings(Long buyerId) {
         return reservationRepository.sumSavingsByBuyerId(buyerId);
     }
 
     // 마이페이지 - 구출 횟수
-    // [수정] 기존: 완료 예약 전체 로딩 후 Java stream 합산
-    // [수정] 변경: DB SUM() 1쿼리로 해결
     public int getRescueCount(Long buyerId) {
         return reservationRepository.sumRescueCountByBuyerId(buyerId);
     }
