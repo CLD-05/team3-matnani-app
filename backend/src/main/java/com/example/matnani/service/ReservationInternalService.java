@@ -40,7 +40,6 @@ public class ReservationInternalService {
             throw new BadRequestException("본인 상품은 예약할 수 없습니다.");
         }
 
-        // 인당 구매 한도 초과 여부 확인
         int alreadyReserved = reservationRepository
                 .findByProductIdAndBuyerIdAndStatusIn(
                         productId,
@@ -58,7 +57,13 @@ public class ReservationInternalService {
             throw new ForbiddenException("노쇼 패널티로 구매가 일시 제한된 계정입니다.");
         }
 
-        product.deductQuantity(quantity);
+        // [수정] DB UPDATE로 직접 차감 — 동시성 안전
+        // Redis Lua에서 이미 재고 선점 완료, DB는 UPDATE로만 동기화
+        productRepository.decrementRemainingQuantity(productId, quantity);
+        product.setRemainingQuantity(product.getRemainingQuantity() - quantity);
+        if (product.getRemainingQuantity() == 0) {
+            product.updateStatus(ProductStatus.SOLD_OUT);
+        }
 
         Reservation reservation = Reservation.builder()
                 .product(product)
