@@ -20,7 +20,14 @@ public class RedissonConfig {
     public RedissonClient redissonClient() {
         Config config = new Config();
         config.useSingleServer()
-                .setAddress("redis://" + host + ":" + port);
+                .setAddress("redis://" + host + ":" + port)
+                // [수정] 커넥션 풀 설정 추가
+                // 기존: 기본값(connectionPoolSize=64, minimumIdleSize=24)
+                //       → 부하 시 Redis 연결 수가 38개까지 급증하며 경합 발생
+                // 변경: dev Redis 제한(10개)에 맞춰 풀 크기 조정
+                //       → 불필요한 커넥션 경합 제거, 안정적인 연결 관리
+                .setConnectionPoolSize(10)
+                .setConnectionMinimumIdleSize(5);
         return Redisson.create(config);
     }
 }
