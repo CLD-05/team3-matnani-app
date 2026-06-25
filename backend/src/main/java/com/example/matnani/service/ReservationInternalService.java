@@ -58,7 +58,13 @@ public class ReservationInternalService {
             throw new ForbiddenException("노쇼 패널티로 구매가 일시 제한된 계정입니다.");
         }
 
-        product.deductQuantity(quantity);
+        // [수정] 기존: product.deductQuantity(quantity) — DB에서 재고 차감
+        //        Lua 방식에서는 Redis에서 이미 차감했으므로 DB 재고 차감 제거
+        //        대신 DB remainingQuantity만 동기화
+        product.setRemainingQuantity(product.getRemainingQuantity() - quantity);
+        if (product.getRemainingQuantity() == 0) {
+            product.updateStatus(ProductStatus.SOLD_OUT);
+        }
 
         Reservation reservation = Reservation.builder()
                 .product(product)
