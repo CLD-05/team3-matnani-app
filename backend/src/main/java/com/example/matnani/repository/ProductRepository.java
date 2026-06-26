@@ -57,7 +57,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "com.example.matnani.domain.enums.Enums.ProductStatus.SOLD_OUT)")
     List<Product> findExpiredProducts(@Param("now") LocalDateTime now);
 
+    // Lua 방식 DB 동기화 — UPDATE로 직접 차감 (동시성 안전)
     @Modifying
     @Query("UPDATE Product p SET p.remainingQuantity = p.remainingQuantity - :quantity WHERE p.id = :productId")
     void decrementRemainingQuantity(@Param("productId") Long productId, @Param("quantity") int quantity);
+
+    // 재고 0이면 SOLD_OUT으로 상태 변경
+    @Modifying
+    @Query("UPDATE Product p SET p.status = 'SOLD_OUT' WHERE p.id = :productId AND p.remainingQuantity = 0")
+    void updateStatusIfSoldOut(@Param("productId") Long productId);
 }

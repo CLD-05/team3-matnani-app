@@ -32,10 +32,6 @@ public class ReservationInternalService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
 
-        // [수정] ON_SALE 체크 제거
-        // Redis Lua에서 이미 재고 선점 완료 → DB 상태 체크 불필요
-        // 기존: ON_SALE 체크로 인해 DB 상태 갱신 전에 여러 요청이 통과하는 레이스 컨디션 발생
-
         if (product.getSeller().getId().equals(buyerId)) {
             throw new BadRequestException("본인 상품은 예약할 수 없습니다.");
         }
@@ -57,12 +53,12 @@ public class ReservationInternalService {
             throw new ForbiddenException("노쇼 패널티로 구매가 일시 제한된 계정입니다.");
         }
 
-        // DB UPDATE로 직접 차감 — 동시성 안전
+        // [수정] DB UPDATE로 직접 차감 (동시성 안전)
+        // product.setRemainingQuantity() 제거 — 메모리 차감은 동시성 문제 발생
         productRepository.decrementRemainingQuantity(productId, quantity);
-        product.setRemainingQuantity(product.getRemainingQuantity() - quantity);
-        if (product.getRemainingQuantity() == 0) {
-            product.updateStatus(ProductStatus.SOLD_OUT);
-        }
+
+        // 재고 0이면 SOLD_OUT — DB에서 직접 처리
+        productRepository.updateStatusIfSoldOut(productId);
 
         Reservation reservation = Reservation.builder()
                 .product(product)
