@@ -39,14 +39,9 @@ public class ReservationService {
         // Step 1: Lua 스크립트로 Redis 재고 원자 차감 (락 없음)
         long remaining = redisStockService.deductStock(productId, quantity);
 
-        if (remaining == -2) {
-            // Redis에 재고 키 없음 → DB에서 동기화 후 재시도
-            Product product = productRepository.findById(productId)
-                    .orElseThrow(() -> new NotFoundException("상품을 찾을 수 없습니다."));
-            redisStockService.syncStockToRedis();
-            remaining = redisStockService.deductStock(productId, quantity);
-        }
-
+        // [수정] -2(Redis 키 없음) 재시도 로직 제거
+        // 동시에 여러 요청이 -2 받고 syncStockToRedis() 동시 호출 → 레이스 컨디션 발생
+        // 서버 시작 시 syncStockToRedis()로 항상 세팅되므로 정상 운영 중엔 -2 없음
         if (remaining < 0) {
             throw new BadRequestException("재고가 부족합니다.");
         }
