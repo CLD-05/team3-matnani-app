@@ -39,8 +39,6 @@ application-local.yml
 application-local.properties
 application-secret.yml
 application-secret.properties
-application-prod.yml
-application-prod.properties
 
 ### AWS 키 파일 ###
 *.pem
