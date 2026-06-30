@@ -43,10 +43,12 @@ jobs:
             echo "ROLE_ARN=${{ secrets.AWS_DEV_ROLE_ARN }}" >> $GITHUB_ENV
             echo "S3_BUCKET=team3-matnani-dev-frontend" >> $GITHUB_ENV
             echo "CLOUDFRONT_ID=${{ secrets.DEV_CLOUDFRONT_ID }}" >> $GITHUB_ENV
+            echo "API_BASE_URL=${{ secrets.DEV_API_BASE_URL }}" >> $GITHUB_ENV
           else
             echo "ROLE_ARN=${{ secrets.AWS_PROD_ROLE_ARN }}" >> $GITHUB_ENV
             echo "S3_BUCKET=team3-matnani-prod-frontend" >> $GITHUB_ENV
             echo "CLOUDFRONT_ID=${{ secrets.PROD_CLOUDFRONT_ID }}" >> $GITHUB_ENV
+            echo "API_BASE_URL=${{ secrets.PROD_API_BASE_URL }}" >> $GITHUB_ENV
           fi
 
       - name: Configure AWS credentials (OIDC)
@@ -69,7 +71,7 @@ jobs:
       - name: Build
         working-directory: frontend
         env:
-          VITE_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
+          VITE_API_BASE_URL: ${{ env.API_BASE_URL }}
         run: npm run build
 
 
