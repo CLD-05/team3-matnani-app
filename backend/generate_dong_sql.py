@@ -6,7 +6,7 @@ data.sql에 추가할 INSERT SQL을 생성하는 스크립트
 사용법:
   pip install requests
   python3 generate_dong_sql.py > dong_data.sql
-  # dong_data.sql 내용을 data.sql 끝에 붙여넣으면 됩니다
+  # dong_data.sql 내용을 regions.sql 끝에 붙여넣으면 됩니다
 """
 import requests
 import re
@@ -15,7 +15,7 @@ from pathlib import Path
 
 BASE_URL = "https://grpc-proxy-server-mkvo6j4wsq-du.a.run.app/v1/regcodes"
 
-# 행정구역코드 앞 2자리 → 내부 시/도 ID (data.sql 기준)
+# 행정구역코드 앞 2자리 → 내부 시/도 ID (regions.sql 기준)
 CITY_PREFIX_TO_ID = {
     '11': 1,   # 서울특별시
     '26': 2,   # 부산광역시
@@ -73,10 +73,10 @@ def get_max_dong_id(sql_content):
 
 
 def main():
-    # data.sql 경로
-    sql_path = Path(__file__).parent / 'src/main/resources/data.sql'
+    # regions.sql 경로
+    sql_path = Path(__file__).parent / 'src/main/resources/regions.sql'
     if not sql_path.exists():
-        print(f"data.sql 파일을 찾을 수 없습니다: {sql_path}", file=sys.stderr)
+        print(f"regions.sql 파일을 찾을 수 없습니다: {sql_path}", file=sys.stderr)
         sys.exit(1)
 
     sql_content = sql_path.read_text(encoding='utf-8')
