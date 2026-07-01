@@ -35,18 +35,18 @@ INSERT INTO products (seller_id, region_id, title, description, category, defect
 -- 상품 이미지
 -- ============================================================
 INSERT INTO product_images (product_id, image_url, sort_order) VALUES
-                                                                   (1,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/macaron.png',    1),
-                                                                   (2,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/madlen.png',     1),
-                                                                   (3,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/saltbread.jpg',  1),
-                                                                   (4,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/pizzabread.png', 1),
-                                                                   (5,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/rice.png',       1),
-                                                                   (6,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/creambread.png', 1),
-                                                                   (7,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/sandwich.jpg',   1),
-                                                                   (8,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/cake.jpg',       1),
-                                                                   (9,  'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/apple.jpg',      1),
-                                                                   (10, 'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/carrot.jpg',     1),
-                                                                   (11, 'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/salad.jpg',      1),
-                                                                   (12, 'https://team3-matnani-dev-images.s3.ap-northeast-2.amazonaws.com/whitebread.png', 1);
+                                                                   (1,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/macaron.png',    1),
+                                                                   (2,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/madlen.png',     1),
+                                                                   (3,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/saltbread.jpg',  1),
+                                                                   (4,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/pizzabread.png', 1),
+                                                                   (5,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/rice.png',       1),
+                                                                   (6,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/creambread.png', 1),
+                                                                   (7,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/sandwich.jpg',   1),
+                                                                   (8,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/cake.jpg',       1),
+                                                                   (9,  'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/apple.jpg',      1),
+                                                                   (10, 'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/carrot.jpg',     1),
+                                                                   (11, 'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/salad.jpg',      1),
+                                                                   (12, 'https://team3-matnani-prod-images.s3.ap-northeast-2.amazonaws.com/whitebread.png', 1);
 
 -- 비밀 댓글 (product_id 채움 → 판매자에게 COMMENT 알림)
 -- ============================================================

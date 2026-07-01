@@ -85,7 +85,7 @@ export function HomePage({ products, selectedRegion, onNavigate }) {
                 </div>
                 <div className="hero-visual" aria-hidden="true">
                     <img
-                        src="https://raw.githubusercontent.com/CLD-05/team3-matnani-app/main/testdata/madlen.png"
+                        src="https://d2l9pqrf1yjvvh.cloudfront.net/images/madlen.png"
                         alt=""
                     />
                 </div>
