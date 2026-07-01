@@ -16,11 +16,15 @@ public class RedissonConfig {
     @Value("${spring.data.redis.port:6379}")
     private int port;
 
+    @Value("${spring.data.redis.ssl.enabled:false}")
+    private boolean sslEnabled;
+
     @Bean(destroyMethod = "shutdown")
     public RedissonClient redissonClient() {
         Config config = new Config();
+        String protocol = sslEnabled ? "rediss://" : "redis://";
         config.useSingleServer()
-                .setAddress("redis://" + host + ":" + port)
+                .setAddress(protocol + host + ":" + port)
                 // [수정] 커넥션 풀 설정 추가
                 // 기존: 기본값(connectionPoolSize=64, minimumIdleSize=24)
                 //       → 부하 시 Redis 연결 수가 38개까지 급증하며 경합 발생
