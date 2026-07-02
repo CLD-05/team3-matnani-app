@@ -72,6 +72,10 @@ npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# 실수로 생성된 Node.js 파일 (백엔드/루트에 npm 실행 방지)
+package-lock.json
+yarn.lock
+
 # 테스트 커버리지
 coverage/
 
