@@ -27,8 +27,7 @@
 
 ### 🖥️ 서비스 화면
 
-
-
+![service](https://raw.githubusercontent.com/CLD-05/team3-matnani-app/main/backend/docs/images/service.png)
 
 <br>
 
