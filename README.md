@@ -22,6 +22,13 @@
 - 거래 완료 후 후기를 작성할 수 있습니다.
 - 구매자는 마이페이지에서 절약 금액, 환경 포인트 및 거래 내역을 확인할 수 있습니다.
 
+
+### 서비스 화면
+
+![service.png](backend/docs/images/service.png)
+
+<br>
+
 <hr style="border: 2px solid #000;">
 
 
